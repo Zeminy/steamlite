@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { PrismaClient, PaymentMethod, PaymentStatus, Role, OrderStatus } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -7,6 +7,7 @@ const hash = (value: string) => bcrypt.hash(value, 10);
 
 async function main() {
   await prisma.review.deleteMany();
+  await prisma.libraryItem.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
@@ -24,7 +25,7 @@ async function main() {
       username: "admin",
       email: "admin@steamlite.local",
       password: await hash("Admin123!"),
-      role: Role.ADMIN,
+      role: "ADMIN",
       cart: { create: {} },
       wishlist: { create: {} },
       admin: {
@@ -40,7 +41,7 @@ async function main() {
       username: "devuser",
       email: "dev@steamlite.local",
       password: await hash("Dev123!"),
-      role: Role.DEVELOPER,
+      role: "DEVELOPER",
       cart: { create: {} },
       wishlist: { create: {} },
       developer: {
@@ -60,7 +61,7 @@ async function main() {
       username: "playerone",
       email: "user@steamlite.local",
       password: await hash("User123!"),
-      role: Role.CUSTOMER,
+      role: "CUSTOMER",
       cart: { create: {} },
       wishlist: { create: {} },
     },
@@ -77,36 +78,48 @@ async function main() {
       title: "Skybreak Tactics",
       description: "Turn-based sci-fi strategy with modular squads and orbital support.",
       price: 19.99,
+      genre: "Strategy",
+      coverImageUrl: "https://picsum.photos/seed/skybreak-tactics/640/360",
       releaseDate: new Date("2025-02-18"),
     },
     {
       title: "Neon Drifter",
       description: "Arcade racing through cyberpunk cities with upgradeable hover cars.",
       price: 14.5,
+      genre: "Racing",
+      coverImageUrl: "https://picsum.photos/seed/neon-drifter/640/360",
       releaseDate: new Date("2024-11-03"),
     },
     {
       title: "Echoes of Terra",
       description: "Action RPG where the planet reshapes itself based on your decisions.",
       price: 29.99,
+      genre: "RPG",
+      coverImageUrl: "https://picsum.photos/seed/echoes-of-terra/640/360",
       releaseDate: new Date("2025-06-12"),
     },
     {
       title: "Dungeon Railway",
       description: "Co-op roguelite where you defend a moving train across haunted tunnels.",
       price: 17.25,
+      genre: "Roguelite",
+      coverImageUrl: "https://picsum.photos/seed/dungeon-railway/640/360",
       releaseDate: new Date("2025-08-01"),
     },
     {
       title: "Pixel Kingdoms Reborn",
       description: "City-builder with diplomacy, trade routes, and seasonal crises.",
       price: 24.0,
+      genre: "Simulation",
+      coverImageUrl: "https://picsum.photos/seed/pixel-kingdoms-reborn/640/360",
       releaseDate: new Date("2024-09-15"),
     },
     {
       title: "Void Signal",
       description: "Narrative thriller about recovering a lost colony from deep-space transmissions.",
       price: 21.75,
+      genre: "Adventure",
+      coverImageUrl: "https://picsum.photos/seed/void-signal/640/360",
       releaseDate: new Date("2025-01-09"),
     },
   ];
@@ -176,7 +189,7 @@ async function main() {
   await prisma.order.create({
     data: {
       userId: customerUser.id,
-      status: OrderStatus.COMPLETED,
+      status: "COMPLETED",
       totalAmount: Number((games[1].price + games[2].price).toFixed(2)),
       orderDate: new Date("2026-03-18T09:30:00"),
       items: {
@@ -194,12 +207,27 @@ async function main() {
       payment: {
         create: {
           amount: Number((games[1].price + games[2].price).toFixed(2)),
-          paymentMethod: PaymentMethod.PAYPAL,
+          paymentMethod: "PAYPAL",
           paymentDate: new Date("2026-03-18T09:31:00"),
-          status: PaymentStatus.SUCCESS,
+          status: "SUCCESS",
         },
       },
     },
+  });
+
+  await prisma.libraryItem.createMany({
+    data: [
+      {
+        userId: customerUser.id,
+        gameId: games[1].id,
+        purchasedAt: new Date("2026-03-18T09:31:00"),
+      },
+      {
+        userId: customerUser.id,
+        gameId: games[2].id,
+        purchasedAt: new Date("2026-03-18T09:31:00"),
+      },
+    ],
   });
 
   console.log("Seed completed.");

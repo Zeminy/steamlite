@@ -4,7 +4,8 @@ import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth, requireRole } from "../../middlewares/auth";
-import { serializeGame } from "../../utils/serializers";
+import { serializeGame, serializeReview } from "../../utils/serializers";
+import { gameDetailInclude, gameWithRelationsInclude, parseReviewRating } from "./game.shared";
 
 export const gameRouter = Router();
 
@@ -22,6 +23,8 @@ gameRouter.get(
       where.OR = [
         { title: { contains: q } },
         { description: { contains: q } },
+        { genre: { contains: q } },
+        { developer: { company: { contains: q } } },
       ];
     }
 
@@ -47,10 +50,7 @@ gameRouter.get(
     const games = await prisma.game.findMany({
       where,
       orderBy,
-      include: {
-        developer: true,
-        reviews: true,
-      },
+      include: gameWithRelationsInclude,
     });
 
     res.json({
@@ -70,17 +70,7 @@ gameRouter.get(
 
     const game = await prisma.game.findUnique({
       where: { id: gameId },
-      include: {
-        developer: true,
-        reviews: {
-          include: {
-            user: {
-              select: { username: true },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
-      },
+      include: gameDetailInclude,
     });
 
     if (!game) {
@@ -90,13 +80,7 @@ gameRouter.get(
     res.json({
       game: {
         ...serializeGame(game),
-        reviews: game.reviews.map((review) => ({
-          id: review.id,
-          username: review.user.username,
-          rating: review.rating,
-          comment: review.comment,
-          createdAt: review.createdAt,
-        })),
+        reviews: game.reviews.map(serializeReview),
       },
     });
   })
@@ -105,7 +89,8 @@ gameRouter.get(
 gameRouter.post(
   "/",
   requireAuth,
-requireRole(["ADMIN", "DEVELOPER"]),  asyncHandler(async (req, res) => {
+  requireRole(["ADMIN", "DEVELOPER"]),
+  asyncHandler(async (req, res) => {
     const { title, description, price, releaseDate, developerId } = req.body;
 
     if (!title || !description || price === undefined || !releaseDate) {
@@ -132,13 +117,12 @@ requireRole(["ADMIN", "DEVELOPER"]),  asyncHandler(async (req, res) => {
         title: String(title).trim(),
         description: String(description).trim(),
         price: Number(price),
+        genre: req.body.genre ? String(req.body.genre).trim() : null,
+        coverImageUrl: req.body.coverImageUrl ? String(req.body.coverImageUrl).trim() : null,
         releaseDate: new Date(releaseDate),
         developerId: parsedDeveloperId,
       },
-      include: {
-        developer: true,
-        reviews: true,
-      },
+      include: gameWithRelationsInclude,
     });
 
     res.status(201).json({
@@ -190,13 +174,15 @@ gameRouter.patch(
         title: title !== undefined ? String(title).trim() : undefined,
         description: description !== undefined ? String(description).trim() : undefined,
         price: price !== undefined ? Number(price) : undefined,
+        genre: req.body.genre !== undefined ? String(req.body.genre).trim() || null : undefined,
+        coverImageUrl:
+          req.body.coverImageUrl !== undefined
+            ? String(req.body.coverImageUrl).trim() || null
+            : undefined,
         releaseDate: releaseDate ? new Date(releaseDate) : undefined,
         developerId: parsedDeveloperId,
       },
-      include: {
-        developer: true,
-        reviews: true,
-      },
+      include: gameWithRelationsInclude,
     });
 
     res.json({
@@ -231,6 +217,75 @@ gameRouter.delete(
 
     res.json({
       message: "Game deleted successfully.",
+    });
+  })
+);
+
+gameRouter.post(
+  "/:id/reviews",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const gameId = Number(req.params.id);
+    const rating = parseReviewRating(req.body.rating);
+    const comment = req.body.comment ? String(req.body.comment).trim() : null;
+
+    if (Number.isNaN(gameId)) {
+      throw new AppError(400, "Invalid game id.");
+    }
+
+    if (rating === null) {
+      throw new AppError(400, "Rating must be an integer between 1 and 5.");
+    }
+
+    const [game, ownership] = await Promise.all([
+      prisma.game.findUnique({ where: { id: gameId } }),
+      prisma.libraryItem.findUnique({
+        where: {
+          userId_gameId: {
+            userId: req.user!.id,
+            gameId,
+          },
+        },
+      }),
+    ]);
+
+    if (!game) {
+      throw new AppError(404, "Game not found.");
+    }
+
+    if (!ownership) {
+      throw new AppError(403, "You can only review games that you own.");
+    }
+
+    const review = await prisma.review.upsert({
+      where: {
+        userId_gameId: {
+          userId: req.user!.id,
+          gameId,
+        },
+      },
+      update: {
+        rating,
+        comment,
+      },
+      create: {
+        userId: req.user!.id,
+        gameId,
+        rating,
+        comment,
+      },
+      include: {
+        user: {
+          select: {
+            username: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      message: "Review saved successfully.",
+      review: serializeReview(review),
     });
   })
 );

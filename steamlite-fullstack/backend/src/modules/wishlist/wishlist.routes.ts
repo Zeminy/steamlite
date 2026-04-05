@@ -4,6 +4,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth } from "../../middlewares/auth";
 import { serializeGame } from "../../utils/serializers";
+import { gameWithRelationsInclude } from "../games/game.shared";
 
 export const wishlistRouter = Router();
 
@@ -16,10 +17,7 @@ const getOrCreateWishlist = async (userId: number) =>
       items: {
         include: {
           game: {
-            include: {
-              developer: true,
-              reviews: true,
-            },
+            include: gameWithRelationsInclude,
           },
         },
       },

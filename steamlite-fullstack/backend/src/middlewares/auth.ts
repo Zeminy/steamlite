@@ -1,7 +1,7 @@
-import { Role } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "../utils/jwt";
 import { AppError } from "../utils/appError";
+import { Role } from "../types/domain";
 
 export const requireAuth = (req: Request, _res: Response, next: NextFunction) => {
   const header = req.headers.authorization;
@@ -28,7 +28,7 @@ export const requireAuth = (req: Request, _res: Response, next: NextFunction) =>
 };
 
 export const requireRole =
-  (...roles: Role[]) =>
+  (roles: Role[]) =>
   (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new AppError(401, "Unauthorized."));

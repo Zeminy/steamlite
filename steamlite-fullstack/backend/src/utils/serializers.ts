@@ -11,6 +11,8 @@ export const serializeGame = (game: any) => {
     title: game.title,
     description: game.description,
     price: game.price,
+    genre: game.genre,
+    coverImageUrl: game.coverImageUrl,
     releaseDate: game.releaseDate,
     createdAt: game.createdAt,
     updatedAt: game.updatedAt,
@@ -20,6 +22,15 @@ export const serializeGame = (game: any) => {
     averageRating,
   };
 };
+
+export const serializeReview = (review: any) => ({
+  id: review.id,
+  username: review.user?.username,
+  userId: review.userId,
+  rating: review.rating,
+  comment: review.comment,
+  createdAt: review.createdAt,
+});
 
 export const serializeCart = (cart: any) => {
   const items = (cart.items || []).map((item: any) => ({
@@ -64,4 +75,10 @@ export const serializeOrder = (order: any) => ({
     game: serializeGame(item.game),
     lineTotal: Number((item.quantity * item.game.price).toFixed(2)),
   })),
+});
+
+export const serializeLibraryItem = (libraryItem: any) => ({
+  id: libraryItem.id,
+  purchasedAt: libraryItem.purchasedAt,
+  game: serializeGame(libraryItem.game),
 });

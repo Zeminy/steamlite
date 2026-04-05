@@ -4,10 +4,10 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { serializeOrder } from "../../utils/serializers";
+import { ROLES } from "../../types/domain";
+import { gameWithRelationsInclude } from "../games/game.shared";
 
 export const adminRouter = Router();
-
-const VALID_ROLES = ["CUSTOMER", "DEVELOPER", "ADMIN"] as const;
 
 adminRouter.use(requireAuth, requireRole(["ADMIN"]));
 
@@ -41,10 +41,7 @@ adminRouter.get(
           items: {
             include: {
               game: {
-                include: {
-                  developer: true,
-                  reviews: true,
-                },
+                include: gameWithRelationsInclude,
               },
             },
           },
@@ -113,10 +110,7 @@ adminRouter.get(
         items: {
           include: {
             game: {
-              include: {
-                developer: true,
-                reviews: true,
-              },
+              include: gameWithRelationsInclude,
             },
           },
         },
@@ -146,7 +140,7 @@ adminRouter.patch(
       throw new AppError(400, "Invalid user id.");
     }
 
-    if (!VALID_ROLES.includes(nextRole as (typeof VALID_ROLES)[number])) {
+    if (!ROLES.includes(nextRole as (typeof ROLES)[number])) {
       throw new AppError(400, "Invalid role.");
     }
 

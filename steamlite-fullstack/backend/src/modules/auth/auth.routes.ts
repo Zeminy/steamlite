@@ -5,6 +5,7 @@ import { signToken } from "../../utils/jwt";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth } from "../../middlewares/auth";
+import { Role } from "../../types/domain";
 
 export const authRouter = Router();
 
@@ -47,7 +48,7 @@ authRouter.post(
       userId: user.id,
       email: user.email,
       username: user.username,
-      role: user.role,
+      role: user.role as Role,
     });
 
     res.status(201).json({
@@ -92,7 +93,7 @@ authRouter.post(
       userId: user.id,
       email: user.email,
       username: user.username,
-      role: user.role,
+      role: user.role as Role,
     });
 
     res.json({

@@ -5,6 +5,7 @@ import { cartRouter } from "../modules/cart/cart.routes";
 import { wishlistRouter } from "../modules/wishlist/wishlist.routes";
 import { orderRouter } from "../modules/orders/order.routes";
 import { adminRouter } from "../modules/admin/admin.routes";
+import { libraryRouter } from "../modules/library/library.routes";
 
 export const apiRouter = Router();
 
@@ -13,4 +14,5 @@ apiRouter.use("/games", gameRouter);
 apiRouter.use("/cart", cartRouter);
 apiRouter.use("/wishlist", wishlistRouter);
 apiRouter.use("/orders", orderRouter);
+apiRouter.use("/library", libraryRouter);
 apiRouter.use("/admin", adminRouter);

@@ -4,6 +4,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth } from "../../middlewares/auth";
 import { serializeCart } from "../../utils/serializers";
+import { gameWithRelationsInclude } from "../games/game.shared";
 
 export const cartRouter = Router();
 
@@ -16,10 +17,7 @@ const getOrCreateCart = async (userId: number) =>
       items: {
         include: {
           game: {
-            include: {
-              developer: true,
-              reviews: true,
-            },
+            include: gameWithRelationsInclude,
           },
         },
       },
@@ -55,6 +53,19 @@ cartRouter.post(
 
     if (!game) {
       throw new AppError(404, "Game not found.");
+    }
+
+    const ownedGame = await prisma.libraryItem.findUnique({
+      where: {
+        userId_gameId: {
+          userId: req.user!.id,
+          gameId,
+        },
+      },
+    });
+
+    if (ownedGame) {
+      throw new AppError(409, "You already own this game.");
     }
 
     const cart = await getOrCreateCart(req.user!.id);

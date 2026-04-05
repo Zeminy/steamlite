@@ -1,10 +1,16 @@
-import { PaymentMethod, PaymentStatus, OrderStatus } from "@prisma/client";
 import { Router } from "express";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth } from "../../middlewares/auth";
 import { serializeOrder } from "../../utils/serializers";
+import {
+  ORDER_STATUSES,
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+  PaymentMethod,
+} from "../../types/domain";
+import { gameWithRelationsInclude } from "../games/game.shared";
 
 export const orderRouter = Router();
 
@@ -20,10 +26,7 @@ orderRouter.get(
         items: {
           include: {
             game: {
-              include: {
-                developer: true,
-                reviews: true,
-              },
+              include: gameWithRelationsInclude,
             },
           },
         },
@@ -44,9 +47,9 @@ orderRouter.post(
   "/checkout",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const requestedMethod = String(req.body.paymentMethod || PaymentMethod.CREDIT_CARD).toUpperCase();
+    const requestedMethod = String(req.body.paymentMethod || "CREDIT_CARD").toUpperCase();
 
-    if (!Object.values(PaymentMethod).includes(requestedMethod as PaymentMethod)) {
+    if (!PAYMENT_METHODS.includes(requestedMethod as PaymentMethod)) {
       throw new AppError(400, "Unsupported payment method.");
     }
 
@@ -70,13 +73,14 @@ orderRouter.post(
     const totalAmount = Number(
       cart.items.reduce((sum, item) => sum + item.quantity * item.game.price, 0).toFixed(2)
     );
+    const purchasedAt = new Date();
 
     const order = await prisma.$transaction(async (transaction) => {
       const createdOrder = await transaction.order.create({
         data: {
           userId: req.user!.id,
           totalAmount,
-          status: OrderStatus.COMPLETED,
+          status: ORDER_STATUSES[1],
           items: {
             create: cart.items.map((item) => ({
               gameId: item.gameId,
@@ -87,7 +91,7 @@ orderRouter.post(
             create: {
               amount: totalAmount,
               paymentMethod: requestedMethod as PaymentMethod,
-              status: PaymentStatus.SUCCESS,
+              status: PAYMENT_STATUSES[1],
             },
           },
         },
@@ -95,16 +99,32 @@ orderRouter.post(
           items: {
             include: {
               game: {
-                include: {
-                  developer: true,
-                  reviews: true,
-                },
+                include: gameWithRelationsInclude,
               },
             },
           },
           payment: true,
         },
       });
+
+      for (const item of cart.items) {
+        await transaction.libraryItem.upsert({
+          where: {
+            userId_gameId: {
+              userId: req.user!.id,
+              gameId: item.gameId,
+            },
+          },
+          update: {
+            purchasedAt,
+          },
+          create: {
+            userId: req.user!.id,
+            gameId: item.gameId,
+            purchasedAt,
+          },
+        });
+      }
 
       await transaction.cartItem.deleteMany({
         where: {
