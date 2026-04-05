@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.local
+coverage
+*.log
+backend/dev.db
+backend/dev.db-journal
+frontend/.vite
+.DS_Store

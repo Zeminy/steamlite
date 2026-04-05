@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id         Int        @id @default(autoincrement()) @map("UserID")
+  username   String     @unique
+  email      String     @unique
+  password   String
+  role       String     @default("CUSTOMER")
+  createdAt  DateTime   @default(now())
+  developer  Developer?
+  admin      Admin?
+  cart       Cart?
+  wishlist   Wishlist?
+  orders     Order[]
+  reviews    Review[]
+}
+
+model Developer {
+  id        Int      @id @default(autoincrement()) @map("DeveloperID")
+  userId    Int      @unique
+  company   String
+  profile   String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  games     Game[]
+}
+
+model Admin {
+  id          Int      @id @default(autoincrement()) @map("AdminID")
+  userId      Int      @unique
+  permissions String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Game {
+  id            Int            @id @default(autoincrement()) @map("GameID")
+  title         String
+  description   String
+  price         Float
+  developerId   Int?
+  releaseDate   DateTime
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  developer     Developer?     @relation(fields: [developerId], references: [id], onDelete: SetNull)
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  wishlistItems WishlistItem[]
+  reviews       Review[]
+}
+
+model Cart {
+  id      Int        @id @default(autoincrement()) @map("CartID")
+  userId  Int        @unique
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items   CartItem[]
+}
+
+model CartItem {
+  id       Int   @id @default(autoincrement()) @map("CartItemID")
+  cartId   Int
+  gameId   Int
+  quantity Int   @default(1)
+  cart     Cart  @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  game     Game  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, gameId])
+}
+
+model Order {
+  id          Int         @id @default(autoincrement()) @map("OrderID")
+  userId      Int
+  orderDate   DateTime    @default(now())
+  totalAmount Float
+  status      String      @default("PENDING")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       OrderItem[]
+  payment     Payment?
+}
+
+model OrderItem {
+  id       Int   @id @default(autoincrement()) @map("OrderItemID")
+  orderId  Int
+  gameId   Int
+  quantity Int   @default(1)
+  order    Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  game     Game  @relation(fields: [gameId], references: [id], onDelete: Restrict)
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement()) @map("PaymentID")
+  orderId        Int          @unique
+  amount         Float
+  paymentDate    DateTime     @default(now())
+  paymentMethod  String        @default("CREDIT_CARD")
+  status         String        @default("PENDING")
+  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Wishlist {
+  id      Int            @id @default(autoincrement()) @map("WishlistID")
+  userId  Int            @unique
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items   WishlistItem[]
+}
+
+model WishlistItem {
+  id         Int      @id @default(autoincrement()) @map("WishlistItemID")
+  wishlistId Int
+  gameId     Int
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, gameId])
+}
+
+model Review {
+  id        Int      @id @default(autoincrement()) @map("ReviewID")
+  userId    Int
+  gameId    Int
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+}
