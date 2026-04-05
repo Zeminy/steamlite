@@ -5,7 +5,15 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { serializeGame, serializeReview } from "../../utils/serializers";
-import { gameDetailInclude, gameWithRelationsInclude, parseReviewRating } from "./game.shared";
+import {
+  gameDetailInclude,
+  gameWithRelationsInclude,
+  parseGamePrice,
+  parseGameReleaseDate,
+  parseOptionalDeveloperId,
+  parseOptionalText,
+  parseReviewRating,
+} from "./game.shared";
 
 export const gameRouter = Router();
 
@@ -92,17 +100,20 @@ gameRouter.post(
   requireRole(["ADMIN", "DEVELOPER"]),
   asyncHandler(async (req, res) => {
     const { title, description, price, releaseDate, developerId } = req.body;
+    const parsedPrice = parseGamePrice(price);
+    const parsedReleaseDate = parseGameReleaseDate(releaseDate);
 
-    if (!title || !description || price === undefined || !releaseDate) {
+    if (!title || !description || parsedPrice === null || parsedReleaseDate === null) {
       throw new AppError(400, "Title, description, price and release date are required.");
     }
 
-    const parsedDeveloperId =
-      developerId !== undefined && developerId !== null && developerId !== ""
-        ? Number(developerId)
-        : undefined;
+    const parsedDeveloperId = parseOptionalDeveloperId(developerId);
 
-    if (parsedDeveloperId !== undefined) {
+    if (developerId !== undefined && developerId !== null && developerId !== "" && parsedDeveloperId === null) {
+      throw new AppError(400, "Developer id must be a positive integer.");
+    }
+
+    if (parsedDeveloperId !== null) {
       const developer = await prisma.developer.findUnique({
         where: { id: parsedDeveloperId },
       });
@@ -116,10 +127,10 @@ gameRouter.post(
       data: {
         title: String(title).trim(),
         description: String(description).trim(),
-        price: Number(price),
-        genre: req.body.genre ? String(req.body.genre).trim() : null,
-        coverImageUrl: req.body.coverImageUrl ? String(req.body.coverImageUrl).trim() : null,
-        releaseDate: new Date(releaseDate),
+        price: parsedPrice,
+        genre: parseOptionalText(req.body.genre),
+        coverImageUrl: parseOptionalText(req.body.coverImageUrl),
+        releaseDate: parsedReleaseDate,
         developerId: parsedDeveloperId,
       },
       include: gameWithRelationsInclude,
@@ -152,13 +163,23 @@ gameRouter.patch(
     }
 
     const { title, description, price, releaseDate, developerId } = req.body;
+    const parsedPrice = price !== undefined ? parseGamePrice(price) : undefined;
+    const parsedReleaseDate = releaseDate !== undefined ? parseGameReleaseDate(releaseDate) : undefined;
+    const parsedDeveloperId = parseOptionalDeveloperId(developerId);
 
-    const parsedDeveloperId =
-      developerId !== undefined && developerId !== null && developerId !== ""
-        ? Number(developerId)
-        : existingGame.developerId;
+    if (price !== undefined && parsedPrice === null) {
+      throw new AppError(400, "Price must be a valid non-negative number.");
+    }
 
-    if (parsedDeveloperId !== undefined && parsedDeveloperId !== null) {
+    if (releaseDate !== undefined && parsedReleaseDate === null) {
+      throw new AppError(400, "Release date must be valid.");
+    }
+
+    if (developerId !== undefined && developerId !== null && developerId !== "" && parsedDeveloperId === null) {
+      throw new AppError(400, "Developer id must be a positive integer.");
+    }
+
+    if (parsedDeveloperId !== null) {
       const developer = await prisma.developer.findUnique({
         where: { id: parsedDeveloperId },
       });
@@ -173,14 +194,11 @@ gameRouter.patch(
       data: {
         title: title !== undefined ? String(title).trim() : undefined,
         description: description !== undefined ? String(description).trim() : undefined,
-        price: price !== undefined ? Number(price) : undefined,
-        genre: req.body.genre !== undefined ? String(req.body.genre).trim() || null : undefined,
-        coverImageUrl:
-          req.body.coverImageUrl !== undefined
-            ? String(req.body.coverImageUrl).trim() || null
-            : undefined,
-        releaseDate: releaseDate ? new Date(releaseDate) : undefined,
-        developerId: parsedDeveloperId,
+        price: parsedPrice,
+        genre: parseOptionalText(req.body.genre),
+        coverImageUrl: parseOptionalText(req.body.coverImageUrl),
+        releaseDate: parsedReleaseDate || undefined,
+        developerId: developerId !== undefined ? parsedDeveloperId : undefined,
       },
       include: gameWithRelationsInclude,
     });
@@ -205,10 +223,22 @@ gameRouter.delete(
 
     const existingGame = await prisma.game.findUnique({
       where: { id: gameId },
+      include: {
+        _count: {
+          select: {
+            orderItems: true,
+            libraryItems: true,
+          },
+        },
+      },
     });
 
     if (!existingGame) {
       throw new AppError(404, "Game not found.");
+    }
+
+    if (existingGame._count.orderItems > 0 || existingGame._count.libraryItems > 0) {
+      throw new AppError(409, "Cannot delete games that already belong to existing orders or libraries.");
     }
 
     await prisma.game.delete({

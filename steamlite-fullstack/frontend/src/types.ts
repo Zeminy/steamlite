@@ -5,6 +5,7 @@ export type User = {
   username: string;
   email: string;
   role: Role;
+  isBanned?: boolean;
   createdAt?: string;
 };
 
@@ -13,6 +14,8 @@ export type Game = {
   title: string;
   description: string;
   price: number;
+  genre?: string | null;
+  coverImageUrl?: string | null;
   releaseDate: string;
   createdAt?: string;
   updatedAt?: string;
@@ -89,15 +92,31 @@ export type AdminUser = {
   username: string;
   email: string;
   role: Role;
+  isBanned: boolean;
+  developerCompany?: string | null;
   createdAt: string;
   orderCount: number;
   reviewCount: number;
+};
+
+export type AdminDeveloper = {
+  id: number;
+  userId: number;
+  username: string;
+  email: string;
+  company: string;
+  profile?: string | null;
+  role: Role;
+  isBanned: boolean;
+  gamesCount: number;
 };
 
 export type GamePayload = {
   title: string;
   description: string;
   price: number;
+  genre?: string;
+  coverImageUrl?: string;
   releaseDate: string;
   developerId?: number | "";
 };

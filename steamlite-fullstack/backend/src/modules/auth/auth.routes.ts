@@ -59,6 +59,7 @@ authRouter.post(
         username: user.username,
         email: user.email,
         role: user.role,
+        isBanned: user.isBanned,
       },
     });
   })
@@ -83,6 +84,10 @@ authRouter.post(
       throw new AppError(401, "Invalid email or password.");
     }
 
+    if (user.isBanned) {
+      throw new AppError(403, "This account has been banned.");
+    }
+
     const isPasswordValid = await comparePassword(String(password), user.password);
 
     if (!isPasswordValid) {
@@ -104,6 +109,7 @@ authRouter.post(
         username: user.username,
         email: user.email,
         role: user.role,
+        isBanned: user.isBanned,
       },
     });
   })
@@ -122,6 +128,7 @@ authRouter.get(
         username: true,
         email: true,
         role: true,
+        isBanned: true,
         createdAt: true,
       },
     });

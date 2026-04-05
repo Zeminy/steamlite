@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Game, GamePayload } from "../types";
+import { AdminDeveloper, Game, GamePayload } from "../types";
 
 type AdminGameFormProps = {
+  developers: AdminDeveloper[];
   selectedGame: Game | null;
   onSubmit: (payload: GamePayload) => Promise<void>;
   onCancel: () => void;
@@ -11,11 +12,18 @@ const emptyForm: GamePayload = {
   title: "",
   description: "",
   price: 0,
+  genre: "",
+  coverImageUrl: "",
   releaseDate: "",
-  developerId: 1,
+  developerId: "",
 };
 
-export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFormProps) => {
+export const AdminGameForm = ({
+  developers,
+  selectedGame,
+  onSubmit,
+  onCancel,
+}: AdminGameFormProps) => {
   const [form, setForm] = useState<GamePayload>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
 
@@ -25,8 +33,10 @@ export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFor
         title: selectedGame.title,
         description: selectedGame.description,
         price: selectedGame.price,
+        genre: selectedGame.genre || "",
+        coverImageUrl: selectedGame.coverImageUrl || "",
         releaseDate: selectedGame.releaseDate.slice(0, 10),
-        developerId: selectedGame.developerId || 1,
+        developerId: selectedGame.developerId || "",
       });
     } else {
       setForm(emptyForm);
@@ -112,13 +122,37 @@ export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFor
       </label>
 
       <label>
-        Developer ID
+        Genre
         <input
-          type="number"
-          min="1"
+          value={form.genre || ""}
+          onChange={(event) => handleChange("genre", event.target.value)}
+          placeholder="RPG, Strategy, Racing..."
+        />
+      </label>
+
+      <label>
+        Cover image URL
+        <input
+          type="url"
+          value={form.coverImageUrl || ""}
+          onChange={(event) => handleChange("coverImageUrl", event.target.value)}
+          placeholder="https://example.com/game-cover.jpg"
+        />
+      </label>
+
+      <label>
+        Developer
+        <select
           value={form.developerId}
           onChange={(event) => handleChange("developerId", event.target.value)}
-        />
+        >
+          <option value="">Independent / no developer</option>
+          {developers.map((developer) => (
+            <option key={developer.id} value={developer.id}>
+              {developer.company} ({developer.username})
+            </option>
+          ))}
+        </select>
       </label>
 
       <button className="button button-primary" type="submit" disabled={submitting}>

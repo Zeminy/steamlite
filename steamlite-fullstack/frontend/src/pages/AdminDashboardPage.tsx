@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "../api/client";
-import { AdminOverview, AdminUser, Game, GamePayload, Order, Role } from "../types";
+import {
+  AdminDeveloper,
+  AdminOverview,
+  AdminUser,
+  Game,
+  GamePayload,
+  Order,
+  Role,
+} from "../types";
 import { AdminGameForm } from "../components/AdminGameForm";
 
 export const AdminDashboardPage = () => {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [developers, setDevelopers] = useState<AdminDeveloper[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -12,19 +21,29 @@ export const AdminDashboardPage = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  const loadData = async (resetMessage = true) => {
     setLoading(true);
-    setMessage("");
+    if (resetMessage) {
+      setMessage("");
+    }
 
     try {
-      const [overviewResponse, usersResponse, gamesResponse, ordersResponse] = await Promise.all([
+      const [
+        overviewResponse,
+        developersResponse,
+        usersResponse,
+        gamesResponse,
+        ordersResponse,
+      ] = await Promise.all([
         apiRequest<{ overview: AdminOverview }>("/admin/overview"),
+        apiRequest<{ developers: AdminDeveloper[] }>("/admin/developers"),
         apiRequest<{ users: AdminUser[] }>("/admin/users"),
         apiRequest<{ games: Game[] }>("/games"),
         apiRequest<{ orders: Order[] }>("/admin/orders"),
       ]);
 
       setOverview(overviewResponse.overview);
+      setDevelopers(developersResponse.developers);
       setUsers(usersResponse.users);
       setGames(gamesResponse.games);
       setOrders(ordersResponse.orders);
@@ -56,7 +75,7 @@ export const AdminDashboardPage = () => {
       }
 
       setSelectedGame(null);
-      await loadData();
+      await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to save game.");
     }
@@ -71,7 +90,7 @@ export const AdminDashboardPage = () => {
       if (selectedGame?.id === gameId) {
         setSelectedGame(null);
       }
-      await loadData();
+      await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to delete game.");
     }
@@ -84,9 +103,33 @@ export const AdminDashboardPage = () => {
         body: JSON.stringify({ role }),
       });
       setMessage("User role updated.");
-      await loadData();
+      await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to update role.");
+    }
+  };
+
+  const toggleBan = async (userId: number, isBanned: boolean) => {
+    try {
+      await apiRequest(`/admin/users/${userId}/${isBanned ? "unban" : "ban"}`, {
+        method: "PATCH",
+      });
+      setMessage(isBanned ? "User unbanned." : "User banned.");
+      await loadData(false);
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Unable to update user status.");
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    try {
+      await apiRequest(`/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+      setMessage("User deleted.");
+      await loadData(false);
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Unable to delete user.");
     }
   };
 
@@ -106,7 +149,7 @@ export const AdminDashboardPage = () => {
             <span className="eyebrow">Admin dashboard</span>
             <h2>Manage platform operations</h2>
           </div>
-          <button className="button button-secondary" onClick={loadData}>
+          <button className="button button-secondary" onClick={() => loadData()}>
             Refresh dashboard
           </button>
         </div>
@@ -137,6 +180,7 @@ export const AdminDashboardPage = () => {
 
       <section className="dashboard-grid">
         <AdminGameForm
+          developers={developers.filter((developer) => !developer.isBanned)}
           selectedGame={selectedGame}
           onSubmit={submitGame}
           onCancel={() => setSelectedGame(null)}
@@ -153,6 +197,7 @@ export const AdminDashboardPage = () => {
               <thead>
                 <tr>
                   <th>Title</th>
+                  <th>Genre</th>
                   <th>Developer</th>
                   <th>Price</th>
                   <th>Release</th>
@@ -163,6 +208,7 @@ export const AdminDashboardPage = () => {
                 {games.map((game) => (
                   <tr key={game.id}>
                     <td>{game.title}</td>
+                    <td>{game.genre || "Uncategorized"}</td>
                     <td>{game.developerCompany}</td>
                     <td>${game.price.toFixed(2)}</td>
                     <td>{new Date(game.releaseDate).toLocaleDateString()}</td>
@@ -198,9 +244,12 @@ export const AdminDashboardPage = () => {
                 <tr>
                   <th>User</th>
                   <th>Role</th>
+                  <th>Status</th>
+                  <th>Developer</th>
                   <th>Orders</th>
                   <th>Reviews</th>
                   <th>Change role</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,6 +260,8 @@ export const AdminDashboardPage = () => {
                       <div className="muted">{entry.email}</div>
                     </td>
                     <td>{entry.role}</td>
+                    <td>{entry.isBanned ? "Banned" : "Active"}</td>
+                    <td>{entry.developerCompany || "-"}</td>
                     <td>{entry.orderCount}</td>
                     <td>{entry.reviewCount}</td>
                     <td>
@@ -222,6 +273,20 @@ export const AdminDashboardPage = () => {
                         <option value="DEVELOPER">DEVELOPER</option>
                         <option value="ADMIN">ADMIN</option>
                       </select>
+                    </td>
+                    <td className="actions-inline">
+                      <button
+                        className="button button-secondary"
+                        onClick={() => toggleBan(entry.id, entry.isBanned)}
+                      >
+                        {entry.isBanned ? "Unban" : "Ban"}
+                      </button>
+                      <button
+                        className="button button-secondary"
+                        onClick={() => deleteUser(entry.id)}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
