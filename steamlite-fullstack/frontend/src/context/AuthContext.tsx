@@ -55,12 +55,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   };
 
   const register = async (username: string, email: string, password: string) => {
-    const response = await apiRequest<{ token: string; user: User }>("/auth/register", {
+    await apiRequest<{ token: string; user: User }>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ username, email, password }),
     });
-
-    persistAuth(response.token, response.user);
   };
 
   const logout = () => {

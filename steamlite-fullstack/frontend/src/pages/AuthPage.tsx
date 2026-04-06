@@ -14,6 +14,7 @@ export const AuthPage = () => {
     password: "",
   });
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">("error");
   const [submitting, setSubmitting] = useState(false);
 
   const title = useMemo(
@@ -48,14 +49,24 @@ export const AuthPage = () => {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
+    setMessageType("error");
 
     try {
       if (mode === "login") {
         await login(form.email, form.password);
       } else {
         await register(form.username, form.email, form.password);
+        setMode("login");
+        setForm((current) => ({
+          username: "",
+          email: current.email,
+          password: "",
+        }));
+        setMessageType("success");
+        setMessage("Account created successfully. Please log in with your new account.");
       }
     } catch (error) {
+      setMessageType("error");
       setMessage(error instanceof ApiError ? error.message : "Authentication failed.");
     } finally {
       setSubmitting(false);
@@ -130,7 +141,15 @@ export const AuthPage = () => {
             />
           </label>
 
-          {message && <div className="status-banner status-error">{message}</div>}
+          {message && (
+            <div
+              className={
+                messageType === "success" ? "status-banner" : "status-banner status-error"
+              }
+            >
+              {message}
+            </div>
+          )}
 
           <button className="button button-primary" type="submit" disabled={submitting}>
             {submitting ? "Submitting..." : mode === "login" ? "Login" : "Create account"}
