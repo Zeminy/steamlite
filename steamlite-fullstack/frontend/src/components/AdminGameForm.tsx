@@ -6,6 +6,8 @@ type AdminGameFormProps = {
   selectedGame: Game | null;
   onSubmit: (payload: GamePayload) => Promise<void>;
   onCancel: () => void;
+  heading?: string;
+  showDeveloperField?: boolean;
 };
 
 const emptyForm: GamePayload = {
@@ -23,6 +25,8 @@ export const AdminGameForm = ({
   selectedGame,
   onSubmit,
   onCancel,
+  heading,
+  showDeveloperField = true,
 }: AdminGameFormProps) => {
   const [form, setForm] = useState<GamePayload>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -72,7 +76,7 @@ export const AdminGameForm = ({
   return (
     <form className="panel form-grid" onSubmit={handleSubmit}>
       <div className="section-header">
-        <h3>{selectedGame ? "Edit game" : "Create new game"}</h3>
+        <h3>{heading || (selectedGame ? "Edit game" : "Create new game")}</h3>
         {selectedGame && (
           <button type="button" className="button button-secondary" onClick={onCancel}>
             Cancel edit
@@ -140,20 +144,22 @@ export const AdminGameForm = ({
         />
       </label>
 
-      <label>
-        Developer
-        <select
-          value={form.developerId}
-          onChange={(event) => handleChange("developerId", event.target.value)}
-        >
-          <option value="">Independent / no developer</option>
-          {developers.map((developer) => (
-            <option key={developer.id} value={developer.id}>
-              {developer.company} ({developer.username})
-            </option>
-          ))}
-        </select>
-      </label>
+      {showDeveloperField && (
+        <label>
+          Developer
+          <select
+            value={form.developerId}
+            onChange={(event) => handleChange("developerId", event.target.value)}
+          >
+            <option value="">Independent / no developer</option>
+            {developers.map((developer) => (
+              <option key={developer.id} value={developer.id}>
+                {developer.company} ({developer.username})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <button className="button button-primary" type="submit" disabled={submitting}>
         {submitting ? "Saving..." : selectedGame ? "Update game" : "Create game"}
