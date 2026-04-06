@@ -1,3 +1,6 @@
+import { prisma } from "../../lib/prisma";
+import { Role } from "../../types/domain";
+
 export const gameWithRelationsInclude = {
   developer: true,
   reviews: true,
@@ -70,4 +73,66 @@ export const parseOptionalText = (value: unknown) => {
 
   const normalized = String(value).trim();
   return normalized ? normalized : null;
+};
+
+type GameAccessParams = {
+  gameId: number;
+  userId: number;
+  role: Role;
+};
+
+export const hasIntrinsicGameAccess = ({
+  userId,
+  role,
+  developerUserId,
+}: {
+  userId: number;
+  role: Role;
+  developerUserId?: number | null;
+}) => role === "ADMIN" || (role === "DEVELOPER" && developerUserId === userId);
+
+export const getGameAccessState = async ({ gameId, userId, role }: GameAccessParams) => {
+  const [game, ownership] = await Promise.all([
+    prisma.game.findUnique({
+      where: { id: gameId },
+      include: {
+        developer: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    }),
+    prisma.libraryItem.findUnique({
+      where: {
+        userId_gameId: {
+          userId,
+          gameId,
+        },
+      },
+    }),
+  ]);
+
+  if (!game) {
+    return {
+      game: null,
+      hasLibraryOwnership: false,
+      hasIntrinsicAccess: false,
+      canAccess: false,
+    };
+  }
+
+  const hasIntrinsicAccess = hasIntrinsicGameAccess({
+    userId,
+    role,
+    developerUserId: game.developer?.userId,
+  });
+  const hasLibraryOwnership = Boolean(ownership);
+
+  return {
+    game,
+    hasLibraryOwnership,
+    hasIntrinsicAccess,
+    canAccess: hasIntrinsicAccess || hasLibraryOwnership,
+  };
 };

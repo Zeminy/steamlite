@@ -10,7 +10,7 @@ import {
   PAYMENT_STATUSES,
   PaymentMethod,
 } from "../../types/domain";
-import { gameWithRelationsInclude } from "../games/game.shared";
+import { gameWithRelationsInclude, getGameAccessState } from "../games/game.shared";
 
 export const orderRouter = Router();
 
@@ -70,8 +70,32 @@ orderRouter.post(
       throw new AppError(400, "Cart is empty.");
     }
 
+    const accessStates = await Promise.all(
+      cart.items.map((item) =>
+        getGameAccessState({
+          gameId: item.gameId,
+          userId: req.user!.id,
+          role: req.user!.role,
+        })
+      )
+    );
+    const blockedPurchase = accessStates.find(
+      (access) => access.hasLibraryOwnership || access.hasIntrinsicAccess
+    );
+
+    if (blockedPurchase) {
+      throw new AppError(
+        409,
+        "Remove games you already own or already have access to before checking out."
+      );
+    }
+
+    const normalizedItems = cart.items.map((item) => ({
+      ...item,
+      quantity: 1,
+    }));
     const totalAmount = Number(
-      cart.items.reduce((sum, item) => sum + item.quantity * item.game.price, 0).toFixed(2)
+      normalizedItems.reduce((sum, item) => sum + item.quantity * item.game.price, 0).toFixed(2)
     );
     const purchasedAt = new Date();
 
@@ -82,9 +106,9 @@ orderRouter.post(
           totalAmount,
           status: ORDER_STATUSES[1],
           items: {
-            create: cart.items.map((item) => ({
+            create: normalizedItems.map((item) => ({
               gameId: item.gameId,
-              quantity: item.quantity,
+              quantity: 1,
             })),
           },
           payment: {
@@ -107,7 +131,7 @@ orderRouter.post(
         },
       });
 
-      for (const item of cart.items) {
+      for (const item of normalizedItems) {
         await transaction.libraryItem.upsert({
           where: {
             userId_gameId: {

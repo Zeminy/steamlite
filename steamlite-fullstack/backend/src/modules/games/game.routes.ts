@@ -8,6 +8,7 @@ import { serializeGame, serializeReview } from "../../utils/serializers";
 import {
   gameDetailInclude,
   gameWithRelationsInclude,
+  getGameAccessState,
   parseGamePrice,
   parseGameReleaseDate,
   parseOptionalDeveloperId,
@@ -435,24 +436,18 @@ gameRouter.post(
       throw new AppError(400, "Rating must be an integer between 1 and 5.");
     }
 
-    const [game, ownership] = await Promise.all([
-      prisma.game.findUnique({ where: { id: gameId } }),
-      prisma.libraryItem.findUnique({
-        where: {
-          userId_gameId: {
-            userId: req.user!.id,
-            gameId,
-          },
-        },
-      }),
-    ]);
+    const access = await getGameAccessState({
+      gameId,
+      userId: req.user!.id,
+      role: req.user!.role,
+    });
 
-    if (!game) {
+    if (!access.game) {
       throw new AppError(404, "Game not found.");
     }
 
-    if (!ownership) {
-      throw new AppError(403, "You can only review games that you own.");
+    if (!access.canAccess) {
+      throw new AppError(403, "Only owners, admins, or the game's developer can review this game.");
     }
 
     const review = await prisma.review.upsert({

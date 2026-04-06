@@ -17,6 +17,7 @@ export const serializeGame = (game: any) => {
     createdAt: game.createdAt,
     updatedAt: game.updatedAt,
     developerId: game.developerId,
+    developerUserId: game.developer?.userId || null,
     developerCompany: game.developer?.company || "Independent",
     reviewCount: ratings.length,
     averageRating,

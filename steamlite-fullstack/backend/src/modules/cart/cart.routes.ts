@@ -4,15 +4,31 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth } from "../../middlewares/auth";
 import { serializeCart } from "../../utils/serializers";
-import { gameWithRelationsInclude } from "../games/game.shared";
+import { gameWithRelationsInclude, getGameAccessState } from "../games/game.shared";
 
 export const cartRouter = Router();
 
-const getOrCreateCart = async (userId: number) =>
-  prisma.cart.upsert({
+const getOrCreateCart = async (userId: number) => {
+  const cart = await prisma.cart.upsert({
     where: { userId },
     update: {},
     create: { userId },
+  });
+
+  await prisma.cartItem.updateMany({
+    where: {
+      cartId: cart.id,
+      quantity: {
+        not: 1,
+      },
+    },
+    data: {
+      quantity: 1,
+    },
+  });
+
+  return prisma.cart.findUniqueOrThrow({
+    where: { id: cart.id },
     include: {
       items: {
         include: {
@@ -23,6 +39,7 @@ const getOrCreateCart = async (userId: number) =>
       },
     },
   });
+};
 
 cartRouter.get(
   "/",
@@ -41,31 +58,32 @@ cartRouter.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const gameId = Number(req.body.gameId);
-    const quantity = req.body.quantity ? Number(req.body.quantity) : 1;
+    const quantity = req.body.quantity !== undefined ? Number(req.body.quantity) : 1;
 
-    if (Number.isNaN(gameId) || Number.isNaN(quantity) || quantity < 1) {
+    if (Number.isNaN(gameId) || Number.isNaN(quantity)) {
       throw new AppError(400, "Valid gameId and quantity are required.");
     }
 
-    const game = await prisma.game.findUnique({
-      where: { id: gameId },
+    if (quantity !== 1) {
+      throw new AppError(400, "Digital games can only be added once per cart.");
+    }
+
+    const access = await getGameAccessState({
+      gameId,
+      userId: req.user!.id,
+      role: req.user!.role,
     });
 
-    if (!game) {
+    if (!access.game) {
       throw new AppError(404, "Game not found.");
     }
 
-    const ownedGame = await prisma.libraryItem.findUnique({
-      where: {
-        userId_gameId: {
-          userId: req.user!.id,
-          gameId,
-        },
-      },
-    });
-
-    if (ownedGame) {
+    if (access.hasLibraryOwnership) {
       throw new AppError(409, "You already own this game.");
+    }
+
+    if (access.hasIntrinsicAccess) {
+      throw new AppError(409, "You already have full access to this game.");
     }
 
     const cart = await getOrCreateCart(req.user!.id);
@@ -78,21 +96,16 @@ cartRouter.post(
     });
 
     if (existingItem) {
-      await prisma.cartItem.update({
-        where: { id: existingItem.id },
-        data: {
-          quantity: existingItem.quantity + quantity,
-        },
-      });
-    } else {
-      await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          gameId,
-          quantity,
-        },
-      });
+      throw new AppError(409, "This game is already in your cart.");
     }
+
+    await prisma.cartItem.create({
+      data: {
+        cartId: cart.id,
+        gameId,
+        quantity: 1,
+      },
+    });
 
     const refreshedCart = await getOrCreateCart(req.user!.id);
 
@@ -110,8 +123,12 @@ cartRouter.patch(
     const cartItemId = Number(req.params.cartItemId);
     const quantity = Number(req.body.quantity);
 
-    if (Number.isNaN(cartItemId) || Number.isNaN(quantity) || quantity < 1) {
+    if (Number.isNaN(cartItemId) || Number.isNaN(quantity)) {
       throw new AppError(400, "Valid cart item id and quantity are required.");
+    }
+
+    if (quantity !== 1) {
+      throw new AppError(400, "Digital games can only have quantity 1.");
     }
 
     const item = await prisma.cartItem.findUnique({

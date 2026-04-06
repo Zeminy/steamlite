@@ -69,14 +69,16 @@ wishlistRouter.post(
       },
     });
 
-    if (!existingItem) {
-      await prisma.wishlistItem.create({
-        data: {
-          wishlistId: wishlist.id,
-          gameId,
-        },
-      });
+    if (existingItem) {
+      throw new AppError(409, "This game is already in your wishlist.");
     }
+
+    await prisma.wishlistItem.create({
+      data: {
+        wishlistId: wishlist.id,
+        gameId,
+      },
+    });
 
     const refreshedWishlist = await getOrCreateWishlist(req.user!.id);
 
