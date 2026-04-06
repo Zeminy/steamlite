@@ -29,6 +29,7 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
         username: true,
         role: true,
         isBanned: true,
+        deletedAt: true,
       },
     });
 
@@ -38,6 +39,10 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
 
     if (user.isBanned) {
       return next(new AppError(403, "This account has been banned."));
+    }
+
+    if (user.deletedAt) {
+      return next(new AppError(403, "This account has been deleted permanently."));
     }
 
     req.user = {

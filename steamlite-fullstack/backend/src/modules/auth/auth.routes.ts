@@ -27,6 +27,10 @@ authRouter.post(
     });
 
     if (existingUser) {
+      if (existingUser.deletedAt) {
+        throw new AppError(409, "This email or username belongs to a deleted account and cannot be reused.");
+      }
+
       throw new AppError(409, "Username or email already exists.");
     }
 
@@ -84,6 +88,10 @@ authRouter.post(
       throw new AppError(401, "Invalid email or password.");
     }
 
+    if (user.deletedAt) {
+      throw new AppError(403, "This account has been deleted permanently.");
+    }
+
     if (user.isBanned) {
       throw new AppError(403, "This account has been banned.");
     }
@@ -129,12 +137,17 @@ authRouter.get(
         email: true,
         role: true,
         isBanned: true,
+        deletedAt: true,
         createdAt: true,
       },
     });
 
     if (!user) {
       throw new AppError(404, "User not found.");
+    }
+
+    if (user.deletedAt) {
+      throw new AppError(403, "This account has been deleted permanently.");
     }
 
     res.json({ user });
