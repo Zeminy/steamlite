@@ -167,8 +167,12 @@ export const AdminDashboardPage = () => {
         {overview && (
           <div className="stat-grid">
             <article className="stat-card">
-              <span>Total users</span>
+              <span>Active users</span>
               <strong>{overview.usersCount}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Deleted users</span>
+              <strong>{overview.deletedUsersCount}</strong>
             </article>
             <article className="stat-card">
               <span>Total games</span>
@@ -179,8 +183,24 @@ export const AdminDashboardPage = () => {
               <strong>{overview.ordersCount}</strong>
             </article>
             <article className="stat-card">
-              <span>Total revenue</span>
-              <strong>${overview.revenue.toFixed(2)}</strong>
+              <span>Gross revenue</span>
+              <strong>${overview.grossRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Platform share</span>
+              <strong>${overview.platformRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Developer share</span>
+              <strong>${overview.developerRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Flagged reviews</span>
+              <strong>{overview.flaggedReviewCount}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Platform commission</span>
+              <strong>{Math.round(overview.commissionRate * 100)}%</strong>
             </article>
           </div>
         )}
@@ -188,7 +208,7 @@ export const AdminDashboardPage = () => {
 
       <section className="dashboard-grid">
         <AdminGameForm
-          developers={developers.filter((developer) => !developer.isBanned)}
+          developers={developers.filter((developer) => !developer.isBanned && !developer.deletedAt)}
           selectedGame={selectedGame}
           onSubmit={submitGame}
           onCancel={() => setSelectedGame(null)}
@@ -242,6 +262,61 @@ export const AdminDashboardPage = () => {
       <section className="dashboard-grid">
         <div className="panel">
           <div className="section-header">
+            <h3>Flagged reviews</h3>
+            <span className="muted">{overview?.flaggedReviewCount || 0} flagged review(s)</span>
+          </div>
+
+          <div className="stack-gap">
+            {overview?.flaggedReviews.length ? (
+              overview.flaggedReviews.map((review) => (
+                <article key={review.id} className="review-card">
+                  <div className="review-header">
+                    <div>
+                      <strong>{review.user.username}</strong>
+                      <div className="muted">
+                        {review.game.title} - {new Date(review.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="price-tag">{review.rating}/5</div>
+                  </div>
+
+                  <p>{review.comment || "No written comment was left for this low review."}</p>
+                  <div className="flagged-review-reasons">
+                    {review.reasons.map((reason) => (
+                      <span key={`${review.id}-${reason}`} className="flagged-review-chip">
+                        {reason}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="actions-row">
+                    <button
+                      className="button button-secondary"
+                      disabled={Boolean(review.user.deletedAt)}
+                      onClick={() => toggleBan(review.user.id, review.user.isBanned)}
+                    >
+                      {review.user.isBanned ? "Unban user" : "Ban user"}
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      disabled={Boolean(review.user.deletedAt)}
+                      onClick={() => deleteUser(review.user.id)}
+                    >
+                      {review.user.deletedAt ? "Deleted" : "Delete user"}
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="empty-state">
+                <h3>No toxic reviews flagged</h3>
+                <p>The dashboard did not detect any clearly suspicious or hostile reviews right now.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="panel">
+          <div className="section-header">
             <h3>User management</h3>
             <span className="muted">{users.length} user(s)</span>
           </div>
@@ -268,13 +343,14 @@ export const AdminDashboardPage = () => {
                       <div className="muted">{entry.email}</div>
                     </td>
                     <td>{entry.role}</td>
-                    <td>{entry.isBanned ? "Banned" : "Active"}</td>
+                    <td>{entry.deletedAt ? "Deleted" : entry.isBanned ? "Banned" : "Active"}</td>
                     <td>{entry.developerCompany || "-"}</td>
                     <td>{entry.orderCount}</td>
                     <td>{entry.reviewCount}</td>
                     <td>
                       <select
                         value={entry.role}
+                        disabled={Boolean(entry.deletedAt)}
                         onChange={(event) => updateRole(entry.id, event.target.value as Role)}
                       >
                         <option value="CUSTOMER">CUSTOMER</option>
@@ -285,15 +361,17 @@ export const AdminDashboardPage = () => {
                     <td className="actions-inline">
                       <button
                         className="button button-secondary"
+                        disabled={Boolean(entry.deletedAt)}
                         onClick={() => toggleBan(entry.id, entry.isBanned)}
                       >
                         {entry.isBanned ? "Unban" : "Ban"}
                       </button>
                       <button
                         className="button button-secondary"
+                        disabled={Boolean(entry.deletedAt)}
                         onClick={() => deleteUser(entry.id)}
                       >
-                        Delete
+                        {entry.deletedAt ? "Deleted" : "Delete"}
                       </button>
                     </td>
                   </tr>
@@ -302,28 +380,28 @@ export const AdminDashboardPage = () => {
             </table>
           </div>
         </div>
+      </section>
 
-        <div className="panel">
-          <div className="section-header">
-            <h3>Recent orders</h3>
-            <span className="muted">{orders.length} total order(s)</span>
-          </div>
+      <section className="panel">
+        <div className="section-header">
+          <h3>Recent orders</h3>
+          <span className="muted">{orders.length} total order(s)</span>
+        </div>
 
-          <div className="stack-gap">
-            {orders.slice(0, 6).map((order) => (
-              <article key={order.id} className="order-item-row">
-                <div>
-                  <strong>
-                    #{order.id} · {order.user?.username || "Customer"}
-                  </strong>
-                  <div className="muted">
-                    {new Date(order.orderDate).toLocaleString()} · {order.payment?.paymentMethod}
-                  </div>
+        <div className="stack-gap">
+          {orders.slice(0, 6).map((order) => (
+            <article key={order.id} className="order-item-row">
+              <div>
+                <strong>
+                  #{order.id} - {order.user?.username || "Customer"}
+                </strong>
+                <div className="muted">
+                  {new Date(order.orderDate).toLocaleString()} - {order.payment?.paymentMethod}
                 </div>
-                <div className="price-tag">${order.totalAmount.toFixed(2)}</div>
-              </article>
-            ))}
-          </div>
+              </div>
+              <div className="price-tag">${order.totalAmount.toFixed(2)}</div>
+            </article>
+          ))}
         </div>
       </section>
     </div>

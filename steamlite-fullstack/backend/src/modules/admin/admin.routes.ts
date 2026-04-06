@@ -6,6 +6,8 @@ import { requireAuth, requireRole } from "../../middlewares/auth";
 import { serializeOrder } from "../../utils/serializers";
 import { ROLES } from "../../types/domain";
 import { gameWithRelationsInclude } from "../games/game.shared";
+import { calculateRevenueSplit } from "../../utils/revenue";
+import { getReviewModerationReasons } from "../../utils/reviewModeration";
 
 export const adminRouter = Router();
 
@@ -23,6 +25,7 @@ adminRouter.get(
             email: true,
             role: true,
             isBanned: true,
+            deletedAt: true,
           },
         },
         _count: {
@@ -46,6 +49,7 @@ adminRouter.get(
         profile: developer.profile,
         role: developer.user.role,
         isBanned: developer.user.isBanned,
+        deletedAt: developer.user.deletedAt,
         gamesCount: developer._count.games,
       })),
     });
@@ -55,48 +59,113 @@ adminRouter.get(
 adminRouter.get(
   "/overview",
   asyncHandler(async (_req, res) => {
-    const [usersCount, gamesCount, ordersCount, revenue, recentOrders] = await Promise.all([
-      prisma.user.count(),
-      prisma.game.count(),
-      prisma.order.count(),
-      prisma.order.aggregate({
-        _sum: {
-          totalAmount: true,
-        },
-        where: {
-          status: "COMPLETED",
-        },
-      }),
-      prisma.order.findMany({
-        take: 5,
-        orderBy: {
-          orderDate: "desc",
-        },
-        include: {
-          user: {
-            select: {
-              username: true,
-              email: true,
+    const [usersCount, deletedUsersCount, gamesCount, ordersCount, revenue, recentOrders, reviews] =
+      await Promise.all([
+        prisma.user.count({
+          where: {
+            deletedAt: null,
+          },
+        }),
+        prisma.user.count({
+          where: {
+            NOT: {
+              deletedAt: null,
             },
           },
-          items: {
-            include: {
-              game: {
-                include: gameWithRelationsInclude,
+        }),
+        prisma.game.count(),
+        prisma.order.count(),
+        prisma.order.aggregate({
+          _sum: {
+            totalAmount: true,
+          },
+          where: {
+            status: "COMPLETED",
+          },
+        }),
+        prisma.order.findMany({
+          take: 5,
+          orderBy: {
+            orderDate: "desc",
+          },
+          include: {
+            user: {
+              select: {
+                username: true,
+                email: true,
+              },
+            },
+            items: {
+              include: {
+                game: {
+                  include: gameWithRelationsInclude,
+                },
+              },
+            },
+            payment: true,
+          },
+        }),
+        prisma.review.findMany({
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+                isBanned: true,
+                deletedAt: true,
+              },
+            },
+            game: {
+              select: {
+                id: true,
+                title: true,
               },
             },
           },
-          payment: true,
-        },
-      }),
-    ]);
+          orderBy: {
+            createdAt: "desc",
+          },
+        }),
+      ]);
+
+    const allFlaggedReviews = reviews
+      .map((review) => ({
+        review,
+        reasons: getReviewModerationReasons({
+          comment: review.comment,
+          rating: review.rating,
+        }),
+      }))
+      .filter((entry) => entry.reasons.length > 0);
 
     res.json({
       overview: {
         usersCount,
+        deletedUsersCount,
         gamesCount,
         ordersCount,
         revenue: revenue._sum.totalAmount || 0,
+        ...calculateRevenueSplit(revenue._sum.totalAmount || 0),
+        flaggedReviewCount: allFlaggedReviews.length,
+        flaggedReviews: allFlaggedReviews.slice(0, 6).map((entry) => ({
+          id: entry.review.id,
+          rating: entry.review.rating,
+          comment: entry.review.comment,
+          createdAt: entry.review.createdAt,
+          reasons: entry.reasons,
+          game: {
+            id: entry.review.game.id,
+            title: entry.review.game.title,
+          },
+          user: {
+            id: entry.review.user.id,
+            username: entry.review.user.username,
+            email: entry.review.user.email,
+            isBanned: entry.review.user.isBanned,
+            deletedAt: entry.review.user.deletedAt,
+          },
+        })),
         recentOrders: recentOrders.map((order) => ({
           ...serializeOrder(order),
           user: order.user,
@@ -135,6 +204,7 @@ adminRouter.get(
         email: user.email,
         role: user.role,
         isBanned: user.isBanned,
+        deletedAt: user.deletedAt,
         developerCompany: user.developer?.company || null,
         createdAt: user.createdAt,
         orderCount: user._count.orders,
@@ -202,6 +272,10 @@ adminRouter.patch(
 
     if (!existingUser) {
       throw new AppError(404, "User not found.");
+    }
+
+    if (existingUser.deletedAt) {
+      throw new AppError(409, "Deleted accounts cannot be edited.");
     }
 
     const user = await prisma.$transaction(async (transaction) => {
@@ -289,6 +363,10 @@ adminRouter.patch(
       throw new AppError(404, "User not found.");
     }
 
+    if (user.deletedAt) {
+      throw new AppError(409, "Deleted accounts cannot be banned.");
+    }
+
     if (user.isBanned) {
       return res.json({
         message: "User is already banned.",
@@ -339,6 +417,10 @@ adminRouter.patch(
       throw new AppError(404, "User not found.");
     }
 
+    if (user.deletedAt) {
+      throw new AppError(409, "Deleted accounts cannot be unbanned.");
+    }
+
     if (!user.isBanned) {
       return res.json({
         message: "User is already active.",
@@ -387,42 +469,51 @@ adminRouter.delete(
 
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        developer: {
-          include: {
-            _count: {
-              select: {
-                games: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            orders: true,
-          },
-        },
-      },
     });
 
     if (!existingUser) {
       throw new AppError(404, "User not found.");
     }
 
-    if (existingUser._count.orders > 0) {
-      throw new AppError(409, "Cannot delete users who already have orders.");
+    if (existingUser.deletedAt) {
+      return res.json({
+        message: "User is already deleted.",
+      });
     }
 
-    if ((existingUser.developer?._count.games || 0) > 0) {
-      throw new AppError(409, "Cannot delete developers who still own published games.");
-    }
+    await prisma.$transaction(async (transaction) => {
+      const userCart = await transaction.cart.findUnique({
+        where: { userId },
+      });
+      const userWishlist = await transaction.wishlist.findUnique({
+        where: { userId },
+      });
 
-    await prisma.user.delete({
-      where: { id: userId },
+      if (userCart) {
+        await transaction.cartItem.deleteMany({
+          where: { cartId: userCart.id },
+        });
+      }
+
+      if (userWishlist) {
+        await transaction.wishlistItem.deleteMany({
+          where: { wishlistId: userWishlist.id },
+        });
+      }
+
+      await transaction.user.update({
+        where: { id: userId },
+        data: {
+          isBanned: false,
+          deletedAt: new Date(),
+          deletedReason:
+            String(req.body?.reason || "Deleted by admin.").trim() || "Deleted by admin.",
+        },
+      });
     });
 
     res.json({
-      message: "User deleted successfully.",
+      message: "User deleted permanently.",
     });
   })
 );

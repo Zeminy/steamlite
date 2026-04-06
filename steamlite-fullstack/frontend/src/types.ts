@@ -6,6 +6,7 @@ export type User = {
   email: string;
   role: Role;
   isBanned?: boolean;
+  deletedAt?: string | null;
   createdAt?: string;
 };
 
@@ -99,11 +100,37 @@ export type Order = {
   };
 };
 
+export type AdminFlaggedReview = {
+  id: number;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  reasons: string[];
+  game: {
+    id: number;
+    title: string;
+  };
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    isBanned: boolean;
+    deletedAt?: string | null;
+  };
+};
+
 export type AdminOverview = {
   usersCount: number;
+  deletedUsersCount: number;
   gamesCount: number;
   ordersCount: number;
   revenue: number;
+  grossRevenue: number;
+  platformRevenue: number;
+  developerRevenue: number;
+  commissionRate: number;
+  flaggedReviewCount: number;
+  flaggedReviews: AdminFlaggedReview[];
   recentOrders: Order[];
 };
 
@@ -113,6 +140,7 @@ export type AdminUser = {
   email: string;
   role: Role;
   isBanned: boolean;
+  deletedAt?: string | null;
   developerCompany?: string | null;
   createdAt: string;
   orderCount: number;
@@ -128,6 +156,7 @@ export type AdminDeveloper = {
   profile?: string | null;
   role: Role;
   isBanned: boolean;
+  deletedAt?: string | null;
   gamesCount: number;
 };
 
@@ -139,4 +168,13 @@ export type GamePayload = {
   coverImageUrl?: string;
   releaseDate: string;
   developerId?: number | "";
+};
+
+export type AssistantChatResponse = {
+  response: string;
+};
+
+export type AssistantChatMessagePayload = {
+  role: "assistant" | "user";
+  content: string;
 };
