@@ -1,4 +1,5 @@
 import { Game, User } from "../types";
+import { Link } from "react-router-dom";
 
 type GameCardProps = {
   game: Game;
@@ -19,14 +20,20 @@ export const GameCard = ({
 }: GameCardProps) => {
   return (
     <article className="game-card">
-      <div className="game-banner">
-        <span>{game.title.slice(0, 2).toUpperCase()}</span>
-      </div>
+      <Link
+        to={`/games/${game.id}`}
+        className={game.coverImageUrl ? "game-banner game-banner-image" : "game-banner"}
+        style={game.coverImageUrl ? { backgroundImage: `url(${game.coverImageUrl})` } : undefined}
+      >
+        {!game.coverImageUrl && <span>{game.title.slice(0, 2).toUpperCase()}</span>}
+      </Link>
 
       <div className="game-card-body">
         <div className="game-card-top">
           <div>
-            <h3>{game.title}</h3>
+            <h3>
+              <Link to={`/games/${game.id}`}>{game.title}</Link>
+            </h3>
             <p className="muted">{game.developerCompany || "Independent studio"}</p>
           </div>
           <div className="price-tag">${game.price.toFixed(2)}</div>
@@ -41,6 +48,10 @@ export const GameCard = ({
         </div>
 
         <div className="actions-row">
+          <Link className="button button-secondary button-link" to={`/games/${game.id}`}>
+            View details
+          </Link>
+
           <button
             className="button button-primary"
             disabled={busy}

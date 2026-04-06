@@ -27,6 +27,9 @@ export const Layout = () => {
 
           {user && (
             <>
+              <NavLink to="/library" className={navClass}>
+                Library
+              </NavLink>
               <NavLink to="/wishlist" className={navClass}>
                 Wishlist
               </NavLink>
@@ -42,6 +45,12 @@ export const Layout = () => {
           {user?.role === "ADMIN" && (
             <NavLink to="/admin" className={navClass}>
               Admin
+            </NavLink>
+          )}
+
+          {user?.role === "DEVELOPER" && (
+            <NavLink to="/my-games" className={navClass}>
+              My Games
             </NavLink>
           )}
         </nav>

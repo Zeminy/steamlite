@@ -144,9 +144,9 @@ export const StorePage = () => {
 
         <div className="panel filter-panel">
           <label>
-            Search title or description
+            Search title, developer, genre or description
             <input
-              placeholder="Try: tactics, racing, story..."
+              placeholder="Try: tactics, racing, indieforge, story..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />

@@ -25,6 +25,19 @@ export type Game = {
   averageRating?: number;
 };
 
+export type Review = {
+  id: number;
+  userId: number;
+  username?: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+};
+
+export type GameDetail = Game & {
+  reviews: Review[];
+};
+
 export type CartItem = {
   id: number;
   quantity: number;
@@ -48,6 +61,12 @@ export type WishlistItem = {
 export type Wishlist = {
   id: number;
   items: WishlistItem[];
+};
+
+export type LibraryItem = {
+  id: number;
+  purchasedAt: string;
+  game: Game;
 };
 
 export type OrderItem = {

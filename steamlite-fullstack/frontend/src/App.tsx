@@ -6,6 +6,9 @@ import { CartProvider } from "./context/CartContext";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { AuthPage } from "./pages/AuthPage";
 import { CartPage } from "./pages/CartPage";
+import { DeveloperGamesPage } from "./pages/DeveloperGamesPage";
+import { GameDetailsPage } from "./pages/GameDetailsPage";
+import { LibraryPage } from "./pages/LibraryPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { StorePage } from "./pages/StorePage";
 import { WishlistPage } from "./pages/WishlistPage";
@@ -19,11 +22,17 @@ export default function App() {
             <Route element={<Layout />}>
               <Route index element={<StorePage />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/games/:id" element={<GameDetailsPage />} />
 
               <Route element={<ProtectedRoute />}>
+                <Route path="/library" element={<LibraryPage />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/orders" element={<OrdersPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredRole="DEVELOPER" />}>
+                <Route path="/my-games" element={<DeveloperGamesPage />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredRole="ADMIN" />}>

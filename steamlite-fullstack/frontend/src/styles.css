@@ -307,6 +307,14 @@ textarea {
   letter-spacing: 0.12em;
 }
 
+.game-banner-image,
+.detail-cover-image,
+.library-cover-image {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .game-card-body {
   padding: 1.2rem;
   display: grid;
@@ -334,6 +342,10 @@ textarea {
 .list-card h3,
 .order-card h3 {
   margin: 0;
+}
+
+.game-card h3 a:hover {
+  color: #93c5fd;
 }
 
 .game-description {
@@ -405,6 +417,32 @@ textarea {
   gap: 16px;
 }
 
+.library-card-content {
+  display: grid;
+  gap: 16px;
+  flex: 1;
+}
+
+@media (min-width: 760px) {
+  .library-card-content {
+    grid-template-columns: 180px 1fr;
+    align-items: start;
+  }
+}
+
+.library-cover {
+  min-height: 120px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(16, 185, 129, 0.85)),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 30%);
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
 .list-card {
   display: flex;
   justify-content: space-between;
@@ -472,6 +510,44 @@ textarea {
   gap: 10px;
 }
 
+.detail-cover {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(16, 185, 129, 0.85)),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 30%);
+}
+
+.detail-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.review-card {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.review-card p {
+  margin-bottom: 0;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+}
+
 .empty-state {
   padding: 1.6rem;
   text-align: center;
@@ -498,7 +574,9 @@ select {
   .meta-row,
   .order-card-header,
   .order-item-row,
-  .actions-row {
+  .actions-row,
+  .detail-actions,
+  .review-header {
     flex-direction: column;
     align-items: flex-start;
   }
