@@ -5,19 +5,25 @@ type GameCardProps = {
   game: Game;
   currentUser: User | null;
   isWishlisted: boolean;
+  isOwned: boolean;
+  hasFullAccess: boolean;
   busy?: boolean;
   onAddToCart: (gameId: number) => void;
-  onToggleWishlist: (gameId: number) => void;
+  onAddToWishlist: (gameId: number) => void;
 };
 
 export const GameCard = ({
   game,
   currentUser,
   isWishlisted,
+  isOwned,
+  hasFullAccess,
   busy,
   onAddToCart,
-  onToggleWishlist,
+  onAddToWishlist,
 }: GameCardProps) => {
+  const addToCartLabel = hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart";
+
   return (
     <article className="game-card">
       <Link
@@ -54,19 +60,19 @@ export const GameCard = ({
 
           <button
             className="button button-primary"
-            disabled={busy}
+            disabled={busy || hasFullAccess || isOwned}
             onClick={() => onAddToCart(game.id)}
           >
-            Add to cart
+            {addToCartLabel}
           </button>
 
           {currentUser && (
             <button
               className="button button-secondary"
               disabled={busy}
-              onClick={() => onToggleWishlist(game.id)}
+              onClick={() => onAddToWishlist(game.id)}
             >
-              {isWishlisted ? "Remove wishlist" : "Save wishlist"}
+              {isWishlisted ? "In wishlist" : "Add to wishlist"}
             </button>
           )}
         </div>

@@ -93,6 +93,10 @@ export const GameDetailsPage = () => {
   );
 
   const isOwned = libraryGameIds.includes(gameId);
+  const hasFullAccess = Boolean(
+    user && (user.role === "ADMIN" || (user.role === "DEVELOPER" && game?.developerUserId === user.id))
+  );
+  const canReview = Boolean(user && (isOwned || hasFullAccess));
   const isWishlisted = wishlistGameIds.includes(gameId);
 
   const handleAddToCart = async () => {
@@ -122,7 +126,7 @@ export const GameDetailsPage = () => {
     }
   };
 
-  const handleToggleWishlist = async () => {
+  const handleAddToWishlist = async () => {
     if (!user) {
       navigate("/auth");
       return;
@@ -132,18 +136,12 @@ export const GameDetailsPage = () => {
     setMessage("");
 
     try {
-      if (isWishlisted) {
-        await apiRequest(`/wishlist/${gameId}`, {
-          method: "DELETE",
-        });
-      } else {
-        await apiRequest(`/wishlist/${gameId}`, {
-          method: "POST",
-        });
-      }
+      await apiRequest(`/wishlist/${gameId}`, {
+        method: "POST",
+      });
 
       await loadUserGameState();
-      setMessage(isWishlisted ? "Game removed from wishlist." : "Game added to wishlist.");
+      setMessage("Game added to wishlist.");
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to update wishlist.");
     } finally {
@@ -224,15 +222,24 @@ export const GameDetailsPage = () => {
 
           <div className="detail-actions">
             <div className="price-tag">${game.price.toFixed(2)}</div>
-            <button className="button button-primary" disabled={busy !== null} onClick={handleAddToCart}>
-              Add to cart
+            <button
+              className="button button-primary"
+              disabled={busy !== null || isOwned || hasFullAccess}
+              onClick={handleAddToCart}
+            >
+              {hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart"}
             </button>
-            <button className="button button-secondary" disabled={busy !== null} onClick={handleToggleWishlist}>
-              {isWishlisted ? "Remove wishlist" : "Save wishlist"}
+            <button className="button button-secondary" disabled={busy !== null} onClick={handleAddToWishlist}>
+              {isWishlisted ? "In wishlist" : "Add to wishlist"}
             </button>
           </div>
 
           {isOwned && <div className="status-banner">You already own this game in your library.</div>}
+          {hasFullAccess && !isOwned && (
+            <div className="status-banner">
+              You already have full access to this game through your current role.
+            </div>
+          )}
           {!user && (
             <div className="status-banner">
               <Link to="/auth">Log in</Link> to add this game to your wishlist, cart, or review it later.
@@ -287,10 +294,10 @@ export const GameDetailsPage = () => {
               <h3>Log in to review.</h3>
               <p>You need an account and a purchased copy before leaving a review.</p>
             </div>
-          ) : !isOwned ? (
+          ) : !canReview ? (
             <div className="empty-state">
-              <h3>Purchase required.</h3>
-              <p>Only players who own the game can submit a review.</p>
+              <h3>Access required.</h3>
+              <p>Only owners, admins, or the game's developer can submit a review.</p>
             </div>
           ) : (
             <form className="form-grid" onSubmit={handleReviewSubmit}>

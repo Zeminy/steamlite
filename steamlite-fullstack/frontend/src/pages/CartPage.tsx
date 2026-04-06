@@ -32,19 +32,6 @@ export const CartPage = () => {
     loadCart();
   }, []);
 
-  const updateQuantity = async (cartItemId: number, quantity: number) => {
-    try {
-      const response = await apiRequest<{ cart: Cart }>(`/cart/items/${cartItemId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ quantity }),
-      });
-      setCart(response.cart);
-      await refreshCart();
-    } catch (error) {
-      setMessage(error instanceof ApiError ? error.message : "Unable to update cart.");
-    }
-  };
-
   const removeItem = async (cartItemId: number) => {
     try {
       const response = await apiRequest<{ cart: Cart }>(`/cart/items/${cartItemId}`, {
@@ -124,15 +111,7 @@ export const CartPage = () => {
                         <div className="muted">{item.game.developerCompany}</div>
                       </td>
                       <td>${item.game.price.toFixed(2)}</td>
-                      <td>
-                        <input
-                          className="qty-input"
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(event) => updateQuantity(item.id, Number(event.target.value))}
-                        />
-                      </td>
+                      <td>{item.quantity}</td>
                       <td>${item.lineTotal.toFixed(2)}</td>
                       <td>
                         <button className="button button-secondary" onClick={() => removeItem(item.id)}>

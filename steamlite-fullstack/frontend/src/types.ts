@@ -20,6 +20,7 @@ export type Game = {
   createdAt?: string;
   updatedAt?: string;
   developerId?: number | null;
+  developerUserId?: number | null;
   developerCompany?: string;
   reviewCount?: number;
   averageRating?: number;

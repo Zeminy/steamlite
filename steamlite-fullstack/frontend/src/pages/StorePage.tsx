@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, ApiError } from "../api/client";
-import { Game, Wishlist } from "../types";
+import { Game, LibraryItem, Wishlist } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { GameCard } from "../components/GameCard";
@@ -12,6 +12,7 @@ export const StorePage = () => {
   const { refreshCart } = useCart();
   const [games, setGames] = useState<Game[]>([]);
   const [wishlistGameIds, setWishlistGameIds] = useState<number[]>([]);
+  const [ownedGameIds, setOwnedGameIds] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
   const [message, setMessage] = useState("");
@@ -32,17 +33,23 @@ export const StorePage = () => {
     }
   };
 
-  const loadWishlist = async () => {
+  const loadUserGameState = async () => {
     if (!user) {
       setWishlistGameIds([]);
+      setOwnedGameIds([]);
       return;
     }
 
     try {
-      const response = await apiRequest<{ wishlist: Wishlist }>("/wishlist");
-      setWishlistGameIds(response.wishlist.items.map((item) => item.game.id));
+      const [wishlistResponse, libraryResponse] = await Promise.all([
+        apiRequest<{ wishlist: Wishlist }>("/wishlist"),
+        apiRequest<{ library: LibraryItem[] }>("/library/me"),
+      ]);
+      setWishlistGameIds(wishlistResponse.wishlist.items.map((item) => item.game.id));
+      setOwnedGameIds(libraryResponse.library.map((item) => item.game.id));
     } catch (_error) {
       setWishlistGameIds([]);
+      setOwnedGameIds([]);
     }
   };
 
@@ -51,7 +58,7 @@ export const StorePage = () => {
   }, [search, sort]);
 
   useEffect(() => {
-    loadWishlist();
+    loadUserGameState();
   }, [user?.id]);
 
   const handleAddToCart = async (gameId: number) => {
@@ -81,7 +88,7 @@ export const StorePage = () => {
     }
   };
 
-  const handleToggleWishlist = async (gameId: number) => {
+  const handleAddToWishlist = async (gameId: number) => {
     if (!user) {
       navigate("/auth");
       return;
@@ -91,26 +98,24 @@ export const StorePage = () => {
     setMessage("");
 
     try {
-      const isWishlisted = wishlistGameIds.includes(gameId);
+      await apiRequest(`/wishlist/${gameId}`, {
+        method: "POST",
+      });
 
-      if (isWishlisted) {
-        await apiRequest(`/wishlist/${gameId}`, {
-          method: "DELETE",
-        });
-      } else {
-        await apiRequest(`/wishlist/${gameId}`, {
-          method: "POST",
-        });
-      }
-
-      await loadWishlist();
-      setMessage(isWishlisted ? "Game removed from wishlist." : "Game added to wishlist.");
+      await loadUserGameState();
+      setMessage("Game added to wishlist.");
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Failed to update wishlist.");
     } finally {
       setBusyGameId(null);
     }
   };
+
+  const hasFullAccess = (game: Game) =>
+    Boolean(
+      user &&
+        (user.role === "ADMIN" || (user.role === "DEVELOPER" && game.developerUserId === user.id))
+    );
 
   const summary = useMemo(
     () => ({
@@ -184,9 +189,11 @@ export const StorePage = () => {
               game={game}
               currentUser={user}
               isWishlisted={wishlistGameIds.includes(game.id)}
+              isOwned={ownedGameIds.includes(game.id)}
+              hasFullAccess={hasFullAccess(game)}
               busy={busyGameId === game.id}
               onAddToCart={handleAddToCart}
-              onToggleWishlist={handleToggleWishlist}
+              onAddToWishlist={handleAddToWishlist}
             />
           ))}
         </section>
