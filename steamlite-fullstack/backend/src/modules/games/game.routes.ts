@@ -17,6 +17,159 @@ import {
 
 export const gameRouter = Router();
 
+const getDeveloperProfileForUser = async (userId: number) =>
+  prisma.developer.findUnique({
+    where: {
+      userId,
+    },
+  });
+
+const getOwnedGameForDeveloper = async (gameId: number, userId: number) => {
+  const developerProfile = await getDeveloperProfileForUser(userId);
+
+  if (!developerProfile) {
+    throw new AppError(403, "Developer profile not found for this account.");
+  }
+
+  const game = await prisma.game.findFirst({
+    where: {
+      id: gameId,
+      developerId: developerProfile.id,
+    },
+    include: gameWithRelationsInclude,
+  });
+
+  if (!game) {
+    throw new AppError(404, "Game not found in your developer catalog.");
+  }
+
+  return { developerProfile, game };
+};
+
+gameRouter.get(
+  "/mine",
+  requireAuth,
+  requireRole(["DEVELOPER"]),
+  asyncHandler(async (req, res) => {
+    const developerProfile = await getDeveloperProfileForUser(req.user!.id);
+
+    if (!developerProfile) {
+      throw new AppError(403, "Developer profile not found for this account.");
+    }
+
+    const games = await prisma.game.findMany({
+      where: {
+        developerId: developerProfile.id,
+      },
+      include: gameWithRelationsInclude,
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+
+    res.json({
+      games: games.map(serializeGame),
+    });
+  })
+);
+
+gameRouter.patch(
+  "/mine/:id",
+  requireAuth,
+  requireRole(["DEVELOPER"]),
+  asyncHandler(async (req, res) => {
+    const gameId = Number(req.params.id);
+
+    if (Number.isNaN(gameId)) {
+      throw new AppError(400, "Invalid game id.");
+    }
+
+    const { developerProfile } = await getOwnedGameForDeveloper(gameId, req.user!.id);
+    const { title, description, price, releaseDate, developerId } = req.body;
+    const parsedPrice = price !== undefined ? parseGamePrice(price) : undefined;
+    const parsedReleaseDate = releaseDate !== undefined ? parseGameReleaseDate(releaseDate) : undefined;
+    const parsedDeveloperId = parseOptionalDeveloperId(developerId);
+
+    if (price !== undefined && parsedPrice === null) {
+      throw new AppError(400, "Price must be a valid non-negative number.");
+    }
+
+    if (releaseDate !== undefined && parsedReleaseDate === null) {
+      throw new AppError(400, "Release date must be valid.");
+    }
+
+    if (developerId !== undefined && parsedDeveloperId !== null && parsedDeveloperId !== developerProfile.id) {
+      throw new AppError(403, "Developers cannot assign games to another developer.");
+    }
+
+    const updatedGame = await prisma.game.update({
+      where: {
+        id: gameId,
+      },
+      data: {
+        title: title !== undefined ? String(title).trim() : undefined,
+        description: description !== undefined ? String(description).trim() : undefined,
+        price: parsedPrice,
+        genre: parseOptionalText(req.body.genre),
+        coverImageUrl: parseOptionalText(req.body.coverImageUrl),
+        releaseDate: parsedReleaseDate || undefined,
+        developerId: developerProfile.id,
+      },
+      include: gameWithRelationsInclude,
+    });
+
+    res.json({
+      message: "Game updated successfully.",
+      game: serializeGame(updatedGame),
+    });
+  })
+);
+
+gameRouter.delete(
+  "/mine/:id",
+  requireAuth,
+  requireRole(["DEVELOPER"]),
+  asyncHandler(async (req, res) => {
+    const gameId = Number(req.params.id);
+
+    if (Number.isNaN(gameId)) {
+      throw new AppError(400, "Invalid game id.");
+    }
+
+    const { game } = await getOwnedGameForDeveloper(gameId, req.user!.id);
+
+    const usage = await prisma.game.findUnique({
+      where: { id: game.id },
+      include: {
+        _count: {
+          select: {
+            orderItems: true,
+            libraryItems: true,
+          },
+        },
+      },
+    });
+
+    if (!usage) {
+      throw new AppError(404, "Game not found.");
+    }
+
+    if (usage._count.orderItems > 0 || usage._count.libraryItems > 0) {
+      throw new AppError(409, "Cannot delete games that already belong to existing orders or libraries.");
+    }
+
+    await prisma.game.delete({
+      where: {
+        id: game.id,
+      },
+    });
+
+    res.json({
+      message: "Game deleted successfully.",
+    });
+  })
+);
+
 gameRouter.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -102,36 +255,51 @@ gameRouter.post(
     const { title, description, price, releaseDate, developerId } = req.body;
     const parsedPrice = parseGamePrice(price);
     const parsedReleaseDate = parseGameReleaseDate(releaseDate);
+    const normalizedTitle = String(title || "").trim();
+    const normalizedDescription = String(description || "").trim();
 
-    if (!title || !description || parsedPrice === null || parsedReleaseDate === null) {
+    if (!normalizedTitle || !normalizedDescription || parsedPrice === null || parsedReleaseDate === null) {
       throw new AppError(400, "Title, description, price and release date are required.");
     }
+    let assignedDeveloperId: number | null = null;
 
-    const parsedDeveloperId = parseOptionalDeveloperId(developerId);
+    if (req.user!.role === "DEVELOPER") {
+      const developerProfile = await getDeveloperProfileForUser(req.user!.id);
 
-    if (developerId !== undefined && developerId !== null && developerId !== "" && parsedDeveloperId === null) {
-      throw new AppError(400, "Developer id must be a positive integer.");
-    }
-
-    if (parsedDeveloperId !== null) {
-      const developer = await prisma.developer.findUnique({
-        where: { id: parsedDeveloperId },
-      });
-
-      if (!developer) {
-        throw new AppError(400, "Developer does not exist.");
+      if (!developerProfile) {
+        throw new AppError(403, "Developer profile not found for this account.");
       }
+
+      assignedDeveloperId = developerProfile.id;
+    } else {
+      const parsedDeveloperId = parseOptionalDeveloperId(developerId);
+
+      if (developerId !== undefined && developerId !== null && developerId !== "" && parsedDeveloperId === null) {
+        throw new AppError(400, "Developer id must be a positive integer.");
+      }
+
+      if (parsedDeveloperId !== null) {
+        const developer = await prisma.developer.findUnique({
+          where: { id: parsedDeveloperId },
+        });
+
+        if (!developer) {
+          throw new AppError(400, "Developer does not exist.");
+        }
+      }
+
+      assignedDeveloperId = parsedDeveloperId;
     }
 
     const game = await prisma.game.create({
       data: {
-        title: String(title).trim(),
-        description: String(description).trim(),
+        title: normalizedTitle,
+        description: normalizedDescription,
         price: parsedPrice,
         genre: parseOptionalText(req.body.genre),
         coverImageUrl: parseOptionalText(req.body.coverImageUrl),
         releaseDate: parsedReleaseDate,
-        developerId: parsedDeveloperId,
+        developerId: assignedDeveloperId,
       },
       include: gameWithRelationsInclude,
     });
