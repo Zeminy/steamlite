@@ -82,6 +82,10 @@ export const AdminDashboardPage = () => {
   };
 
   const deleteGame = async (gameId: number) => {
+    if (!window.confirm("Delete this game from the catalog? This action cannot be undone.")) {
+      return;
+    }
+
     try {
       await apiRequest(`/games/${gameId}`, {
         method: "DELETE",
@@ -122,6 +126,10 @@ export const AdminDashboardPage = () => {
   };
 
   const deleteUser = async (userId: number) => {
+    if (!window.confirm("Delete this user account? This action cannot be undone.")) {
+      return;
+    }
+
     try {
       await apiRequest(`/admin/users/${userId}`, {
         method: "DELETE",

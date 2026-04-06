@@ -53,6 +53,10 @@ export const DeveloperGamesPage = () => {
   };
 
   const deleteGame = async (gameId: number) => {
+    if (!window.confirm("Delete this game from your catalog? This action cannot be undone.")) {
+      return;
+    }
+
     try {
       await apiRequest(`/games/mine/${gameId}`, {
         method: "DELETE",
