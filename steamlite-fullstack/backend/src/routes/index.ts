@@ -6,6 +6,7 @@ import { wishlistRouter } from "../modules/wishlist/wishlist.routes";
 import { orderRouter } from "../modules/orders/order.routes";
 import { adminRouter } from "../modules/admin/admin.routes";
 import { libraryRouter } from "../modules/library/library.routes";
+import { assistantRouter } from "../modules/assistant/assistant.routes";
 
 export const apiRouter = Router();
 
@@ -16,3 +17,4 @@ apiRouter.use("/wishlist", wishlistRouter);
 apiRouter.use("/orders", orderRouter);
 apiRouter.use("/library", libraryRouter);
 apiRouter.use("/admin", adminRouter);
+apiRouter.use("/assistant", assistantRouter);

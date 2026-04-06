@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
+import { AssistantPage } from "./pages/AssistantPage";
 import { AuthPage } from "./pages/AuthPage";
 import { CartPage } from "./pages/CartPage";
 import { DeveloperGamesPage } from "./pages/DeveloperGamesPage";
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/games/:id" element={<GameDetailsPage />} />
 
               <Route element={<ProtectedRoute />}>
+                <Route path="/assistant" element={<AssistantPage />} />
                 <Route path="/library" element={<LibraryPage />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/wishlist" element={<WishlistPage />} />
