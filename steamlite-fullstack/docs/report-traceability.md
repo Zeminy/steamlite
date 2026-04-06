@@ -5,10 +5,16 @@
 | Report use case | Backend module | Frontend page |
 |---|---|---|
 | Login | `modules/auth` | `pages/AuthPage.tsx` |
+| Register | `modules/auth` | `pages/AuthPage.tsx` |
 | Browse and Search Games | `modules/games` | `pages/StorePage.tsx` |
+| View Game Details | `modules/games` | `pages/GameDetailsPage.tsx` |
+| Game Reviews | `modules/games` | `pages/GameDetailsPage.tsx` |
 | Add to Cart | `modules/cart` | `pages/StorePage.tsx`, `pages/CartPage.tsx` |
 | Purchase Game | `modules/orders` | `pages/CartPage.tsx`, `pages/OrdersPage.tsx` |
+| View Library | `modules/library` | `pages/LibraryPage.tsx` |
 | Manage Games (Admin) | `modules/games`, `modules/admin` | `pages/AdminDashboardPage.tsx` |
+| Manage Own Games (Developer) | `modules/games` | `pages/DeveloperGamesPage.tsx` |
+| Manage Users (Admin) | `modules/admin` | `pages/AdminDashboardPage.tsx` |
 | Wishlist | `modules/wishlist` | `pages/WishlistPage.tsx` |
 
 ## Data dictionary mapped to Prisma models
@@ -27,6 +33,7 @@
 | Wishlist | `Wishlist` |
 | WishlistItem | `WishlistItem` |
 | Review | `Review` |
+| Library | `LibraryItem` |
 
 ## MVC alignment
 
@@ -38,9 +45,9 @@ The project keeps the spirit of the report's MVC discussion:
 
 ## Roles implemented
 
-- **Customer**: browse, add to cart, wishlist, checkout, see own orders
-- **Admin**: dashboard, game CRUD, role management, monitor orders
-- **Developer**: represented in the data model and seed data
+- **Customer**: browse, search, view details, wishlist, cart, checkout, library, reviews
+- **Admin**: dashboard, game CRUD, role management, user moderation, monitor orders
+- **Developer**: manage own game catalog, create/edit/delete owned games
 
 ## Notes
 
