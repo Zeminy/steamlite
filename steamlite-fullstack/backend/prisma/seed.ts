@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { calculateDiscountedPrice } from "../src/utils/pricing";
+import { calculateRevenueSplit } from "../src/utils/revenue";
 
 const prisma = new PrismaClient();
 
@@ -23,6 +25,7 @@ type GameSeed = {
   title: string;
   description: string;
   price: number;
+  discountPercent?: number;
   genre: string;
   coverImageUrl: string;
   releaseDate: string;
@@ -95,6 +98,7 @@ const gameSeeds: GameSeed[] = [
     title: "Neon Drifter",
     description: "Arcade racing through cyberpunk cities with upgradeable hover cars.",
     price: 14.5,
+    discountPercent: 15,
     genre: "Racing",
     coverImageUrl: "https://picsum.photos/seed/neon-drifter/640/360",
     releaseDate: "2024-11-03",
@@ -158,6 +162,7 @@ const gameSeeds: GameSeed[] = [
     title: "Moon Orchard",
     description: "Relaxed farming sim on a lunar colony with modular greenhouse systems.",
     price: 16.99,
+    discountPercent: 20,
     genre: "Simulation",
     coverImageUrl: "https://picsum.photos/seed/moon-orchard/640/360",
     releaseDate: "2025-04-08",
@@ -176,6 +181,7 @@ const gameSeeds: GameSeed[] = [
     title: "Threads of Sol",
     description: "Emotional puzzle-platformer about repairing a dying sun through woven timelines.",
     price: 13.25,
+    discountPercent: 10,
     genre: "Puzzle",
     coverImageUrl: "https://picsum.photos/seed/threads-of-sol/640/360",
     releaseDate: "2024-08-12",
@@ -314,6 +320,7 @@ async function main() {
         title: seed.title,
         description: seed.description,
         price: seed.price,
+        discountPercent: seed.discountPercent || 0,
         genre: seed.genre,
         coverImageUrl: seed.coverImageUrl,
         releaseDate: new Date(seed.releaseDate),
@@ -424,20 +431,33 @@ async function main() {
   for (const orderSeed of completedOrders) {
     const selectedGames = orderSeed.gameIndexes.map((index) => games[index]);
     const totalAmount = Number(
-      selectedGames.reduce((sum, game) => sum + game.price, 0).toFixed(2)
+      selectedGames
+        .reduce((sum, game) => sum + calculateDiscountedPrice(game.price, game.discountPercent || 0).finalPrice, 0)
+        .toFixed(2)
     );
+    const revenueSplit = calculateRevenueSplit(totalAmount);
 
     await prisma.order.create({
       data: {
         userId: orderSeed.userId,
         status: "COMPLETED",
         totalAmount,
+        platformRevenue: revenueSplit.platformRevenue,
+        developerRevenue: revenueSplit.developerRevenue,
+        commissionRate: revenueSplit.commissionRate,
         orderDate: orderSeed.orderDate,
         items: {
-          create: selectedGames.map((game) => ({
-            gameId: game.id,
-            quantity: 1,
-          })),
+          create: selectedGames.map((game) => {
+            const pricing = calculateDiscountedPrice(game.price, game.discountPercent || 0);
+
+            return {
+              gameId: game.id,
+              quantity: 1,
+              baseUnitPrice: pricing.basePrice,
+              discountPercent: pricing.discountPercent,
+              finalUnitPrice: pricing.finalPrice,
+            };
+          }),
         },
         payment: {
           create: {

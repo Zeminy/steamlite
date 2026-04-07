@@ -59,7 +59,7 @@ adminRouter.get(
 adminRouter.get(
   "/overview",
   asyncHandler(async (_req, res) => {
-    const [usersCount, deletedUsersCount, gamesCount, ordersCount, revenue, recentOrders, reviews] =
+    const [usersCount, deletedUsersCount, gamesCount, ordersCount, orderTotals, recentOrders, reviews] =
       await Promise.all([
         prisma.user.count({
           where: {
@@ -128,6 +128,7 @@ adminRouter.get(
           },
         }),
       ]);
+    const revenueSplit = calculateRevenueSplit(orderTotals._sum.totalAmount || 0);
 
     const allFlaggedReviews = reviews
       .map((review) => ({
@@ -145,8 +146,11 @@ adminRouter.get(
         deletedUsersCount,
         gamesCount,
         ordersCount,
-        revenue: revenue._sum.totalAmount || 0,
-        ...calculateRevenueSplit(revenue._sum.totalAmount || 0),
+        revenue: orderTotals._sum.totalAmount || 0,
+        grossRevenue: revenueSplit.grossRevenue,
+        platformRevenue: revenueSplit.platformRevenue,
+        developerRevenue: revenueSplit.developerRevenue,
+        commissionRate: revenueSplit.commissionRate,
         flaggedReviewCount: allFlaggedReviews.length,
         flaggedReviews: allFlaggedReviews.slice(0, 6).map((entry) => ({
           id: entry.review.id,

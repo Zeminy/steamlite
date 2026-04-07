@@ -12,6 +12,7 @@ import {
   parseGamePrice,
   parseGameReleaseDate,
   parseOptionalDeveloperId,
+  parseDiscountPercent,
   parseOptionalText,
   parseReviewRating,
 } from "./game.shared";
@@ -86,11 +87,10 @@ gameRouter.patch(
     }
 
     const { developerProfile } = await getOwnedGameForDeveloper(gameId, req.user!.id);
-    const { title, description, price, releaseDate, developerId } = req.body;
+    const { title, description, price, releaseDate, developerId, discountPercent } = req.body;
     const parsedPrice = price !== undefined ? parseGamePrice(price) : undefined;
     const parsedReleaseDate = releaseDate !== undefined ? parseGameReleaseDate(releaseDate) : undefined;
     const parsedDeveloperId = parseOptionalDeveloperId(developerId);
-
     if (price !== undefined && parsedPrice === null) {
       throw new AppError(400, "Price must be a valid non-negative number.");
     }
@@ -101,6 +101,10 @@ gameRouter.patch(
 
     if (developerId !== undefined && parsedDeveloperId !== null && parsedDeveloperId !== developerProfile.id) {
       throw new AppError(403, "Developers cannot assign games to another developer.");
+    }
+
+    if (discountPercent !== undefined) {
+      throw new AppError(403, "Only admins can manage discounts.");
     }
 
     const updatedGame = await prisma.game.update({
@@ -253,15 +257,21 @@ gameRouter.post(
   requireAuth,
   requireRole(["ADMIN", "DEVELOPER"]),
   asyncHandler(async (req, res) => {
-    const { title, description, price, releaseDate, developerId } = req.body;
+    const { title, description, price, releaseDate, developerId, discountPercent } = req.body;
     const parsedPrice = parseGamePrice(price);
     const parsedReleaseDate = parseGameReleaseDate(releaseDate);
+    const parsedDiscountPercent = parseDiscountPercent(discountPercent);
     const normalizedTitle = String(title || "").trim();
     const normalizedDescription = String(description || "").trim();
 
     if (!normalizedTitle || !normalizedDescription || parsedPrice === null || parsedReleaseDate === null) {
       throw new AppError(400, "Title, description, price and release date are required.");
     }
+
+    if (discountPercent !== undefined && parsedDiscountPercent === null) {
+      throw new AppError(400, "Discount percent must be a number between 0 and 90.");
+    }
+
     let assignedDeveloperId: number | null = null;
 
     if (req.user!.role === "DEVELOPER") {
@@ -269,6 +279,10 @@ gameRouter.post(
 
       if (!developerProfile) {
         throw new AppError(403, "Developer profile not found for this account.");
+      }
+
+      if (discountPercent !== undefined) {
+        throw new AppError(403, "Only admins can manage discounts.");
       }
 
       assignedDeveloperId = developerProfile.id;
@@ -297,6 +311,7 @@ gameRouter.post(
         title: normalizedTitle,
         description: normalizedDescription,
         price: parsedPrice,
+        discountPercent: req.user!.role === "ADMIN" ? parsedDiscountPercent || 0 : 0,
         genre: parseOptionalText(req.body.genre),
         coverImageUrl: parseOptionalText(req.body.coverImageUrl),
         releaseDate: parsedReleaseDate,
@@ -331,10 +346,11 @@ gameRouter.patch(
       throw new AppError(404, "Game not found.");
     }
 
-    const { title, description, price, releaseDate, developerId } = req.body;
+    const { title, description, price, releaseDate, developerId, discountPercent } = req.body;
     const parsedPrice = price !== undefined ? parseGamePrice(price) : undefined;
     const parsedReleaseDate = releaseDate !== undefined ? parseGameReleaseDate(releaseDate) : undefined;
     const parsedDeveloperId = parseOptionalDeveloperId(developerId);
+    const parsedDiscountPercent = parseDiscountPercent(discountPercent);
 
     if (price !== undefined && parsedPrice === null) {
       throw new AppError(400, "Price must be a valid non-negative number.");
@@ -346,6 +362,10 @@ gameRouter.patch(
 
     if (developerId !== undefined && developerId !== null && developerId !== "" && parsedDeveloperId === null) {
       throw new AppError(400, "Developer id must be a positive integer.");
+    }
+
+    if (discountPercent !== undefined && parsedDiscountPercent === null) {
+      throw new AppError(400, "Discount percent must be a number between 0 and 90.");
     }
 
     if (parsedDeveloperId !== null) {
@@ -364,6 +384,7 @@ gameRouter.patch(
         title: title !== undefined ? String(title).trim() : undefined,
         description: description !== undefined ? String(description).trim() : undefined,
         price: parsedPrice,
+        discountPercent: discountPercent !== undefined ? parsedDiscountPercent || 0 : undefined,
         genre: parseOptionalText(req.body.genre),
         coverImageUrl: parseOptionalText(req.body.coverImageUrl),
         releaseDate: parsedReleaseDate || undefined,

@@ -1,3 +1,5 @@
+import { calculateDiscountedPrice } from "./pricing";
+
 export const serializeGame = (game: any) => {
   const ratings = (game.reviews || []).map((review: any) => review.rating);
   const averageRating = ratings.length
@@ -5,12 +7,17 @@ export const serializeGame = (game: any) => {
         (ratings.reduce((total: number, rating: number) => total + rating, 0) / ratings.length).toFixed(1)
       )
     : 0;
+  const pricing = calculateDiscountedPrice(game.price, game.discountPercent || 0);
 
   return {
     id: game.id,
     title: game.title,
     description: game.description,
     price: game.price,
+    basePrice: pricing.basePrice,
+    discountPercent: pricing.discountPercent,
+    finalPrice: pricing.finalPrice,
+    isDiscounted: pricing.isDiscounted,
     genre: game.genre,
     coverImageUrl: game.coverImageUrl,
     releaseDate: game.releaseDate,
@@ -38,7 +45,7 @@ export const serializeCart = (cart: any) => {
     id: item.id,
     quantity: item.quantity,
     game: serializeGame(item.game),
-    lineTotal: Number((item.quantity * item.game.price).toFixed(2)),
+    lineTotal: Number((item.quantity * calculateDiscountedPrice(item.game.price, item.game.discountPercent || 0).finalPrice).toFixed(2)),
   }));
 
   const totalItems = items.reduce((count: number, item: any) => count + item.quantity, 0);
@@ -60,6 +67,9 @@ export const serializeOrder = (order: any) => ({
   userId: order.userId,
   orderDate: order.orderDate,
   totalAmount: order.totalAmount,
+  platformRevenue: order.platformRevenue,
+  developerRevenue: order.developerRevenue,
+  commissionRate: order.commissionRate,
   status: order.status,
   payment: order.payment
     ? {
@@ -70,12 +80,24 @@ export const serializeOrder = (order: any) => ({
         status: order.payment.status,
       }
     : null,
-  items: (order.items || []).map((item: any) => ({
-    id: item.id,
-    quantity: item.quantity,
-    game: serializeGame(item.game),
-    lineTotal: Number((item.quantity * item.game.price).toFixed(2)),
-  })),
+  items: (order.items || []).map((item: any) => {
+    const fallbackFinalUnitPrice =
+      item.finalUnitPrice && item.finalUnitPrice > 0
+        ? item.finalUnitPrice
+        : item.baseUnitPrice && item.baseUnitPrice > 0
+        ? item.baseUnitPrice
+        : calculateDiscountedPrice(item.game.price, item.game.discountPercent || 0).finalPrice;
+
+    return {
+      id: item.id,
+      quantity: item.quantity,
+      game: serializeGame(item.game),
+      baseUnitPrice: item.baseUnitPrice,
+      discountPercent: item.discountPercent,
+      finalUnitPrice: fallbackFinalUnitPrice,
+      lineTotal: Number((item.quantity * fallbackFinalUnitPrice).toFixed(2)),
+    };
+  }),
 });
 
 export const serializeLibraryItem = (libraryItem: any) => ({

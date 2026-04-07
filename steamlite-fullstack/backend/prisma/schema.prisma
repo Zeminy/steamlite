@@ -48,6 +48,7 @@ model Game {
   title         String
   description   String
   price         Float
+  discountPercent Float        @default(0)
   genre         String?
   coverImageUrl String?
   developerId   Int?
@@ -85,6 +86,9 @@ model Order {
   userId      Int
   orderDate   DateTime    @default(now())
   totalAmount Float
+  platformRevenue Float   @default(0)
+  developerRevenue Float  @default(0)
+  commissionRate Float    @default(0.3)
   status      String      @default("PENDING")
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items       OrderItem[]
@@ -92,12 +96,15 @@ model Order {
 }
 
 model OrderItem {
-  id       Int   @id @default(autoincrement()) @map("OrderItemID")
-  orderId  Int
-  gameId   Int
-  quantity Int   @default(1)
-  order    Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  game     Game  @relation(fields: [gameId], references: [id], onDelete: Restrict)
+  id            Int   @id @default(autoincrement()) @map("OrderItemID")
+  orderId       Int
+  gameId        Int
+  quantity      Int   @default(1)
+  baseUnitPrice Float @default(0)
+  discountPercent Float @default(0)
+  finalUnitPrice Float @default(0)
+  order         Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  game          Game  @relation(fields: [gameId], references: [id], onDelete: Restrict)
 }
 
 model Payment {

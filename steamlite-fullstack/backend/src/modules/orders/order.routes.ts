@@ -11,6 +11,8 @@ import {
   PaymentMethod,
 } from "../../types/domain";
 import { gameWithRelationsInclude, getGameAccessState } from "../games/game.shared";
+import { calculateDiscountedPrice } from "../../utils/pricing";
+import { calculateRevenueSplit } from "../../utils/revenue";
 
 export const orderRouter = Router();
 
@@ -90,13 +92,19 @@ orderRouter.post(
       );
     }
 
-    const normalizedItems = cart.items.map((item) => ({
-      ...item,
-      quantity: 1,
-    }));
+    const normalizedItems = cart.items.map((item) => {
+      const pricing = calculateDiscountedPrice(item.game.price, item.game.discountPercent || 0);
+
+      return {
+        ...item,
+        quantity: 1,
+        pricing,
+      };
+    });
     const totalAmount = Number(
-      normalizedItems.reduce((sum, item) => sum + item.quantity * item.game.price, 0).toFixed(2)
+      normalizedItems.reduce((sum, item) => sum + item.quantity * item.pricing.finalPrice, 0).toFixed(2)
     );
+    const revenueSplit = calculateRevenueSplit(totalAmount);
     const purchasedAt = new Date();
 
     const order = await prisma.$transaction(async (transaction) => {
@@ -104,11 +112,17 @@ orderRouter.post(
         data: {
           userId: req.user!.id,
           totalAmount,
+          platformRevenue: revenueSplit.platformRevenue,
+          developerRevenue: revenueSplit.developerRevenue,
+          commissionRate: revenueSplit.commissionRate,
           status: ORDER_STATUSES[1],
           items: {
             create: normalizedItems.map((item) => ({
               gameId: item.gameId,
               quantity: 1,
+              baseUnitPrice: item.pricing.basePrice,
+              discountPercent: item.pricing.discountPercent,
+              finalUnitPrice: item.pricing.finalPrice,
             })),
           },
           payment: {

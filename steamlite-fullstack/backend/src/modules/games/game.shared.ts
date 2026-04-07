@@ -38,6 +38,20 @@ export const parseGamePrice = (value: unknown) => {
   return Number(price.toFixed(2));
 };
 
+export const parseDiscountPercent = (value: unknown) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const discountPercent = Number(value);
+
+  if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 90) {
+    return null;
+  }
+
+  return Number(discountPercent.toFixed(2));
+};
+
 export const parseGameReleaseDate = (value: unknown) => {
   if (!value) {
     return null;
