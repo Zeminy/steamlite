@@ -200,11 +200,12 @@ export const GameDetailsPage = () => {
   return (
     <div className="stack-gap">
       <section className="hero-grid">
-        <div
-          className={game.coverImageUrl ? "panel detail-cover detail-cover-image" : "panel detail-cover"}
-          style={game.coverImageUrl ? { backgroundImage: `url(${game.coverImageUrl})` } : undefined}
-        >
-          {!game.coverImageUrl && <span>{game.title.slice(0, 2).toUpperCase()}</span>}
+        <div className="panel detail-cover">
+          {game.coverImageUrl ? (
+            <img className="detail-cover-media" src={game.coverImageUrl} alt={game.title} />
+          ) : (
+            <span>{game.title.slice(0, 2).toUpperCase()}</span>
+          )}
         </div>
 
         <div className="panel stack-gap">
