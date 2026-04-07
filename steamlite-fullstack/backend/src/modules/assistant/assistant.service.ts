@@ -79,6 +79,8 @@ type OpenAiResponsesResult = {
 
 const isGroqProvider = () => env.aiBaseUrl.toLowerCase().includes("groq");
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const META_PREFIX_PATTERN =
+  /^(need\b|need to\b|we need\b|i need\b|i should\b|we should\b|the task is\b|we must\b|must answer\b)/i;
 
 const normalize = (value: string) =>
   value
@@ -225,6 +227,38 @@ const extractResponseText = (data: OpenAiResponsesResult) => {
   return flattenedText;
 };
 
+const sanitizeAssistantReply = (reply: string) => {
+  const cleaned = reply
+    .split(/\r?\n/)
+    .filter((line, index) => !(index === 0 && META_PREFIX_PATTERN.test(line.trim())))
+    .join("\n")
+    .trim();
+
+  return cleaned || reply.trim();
+};
+
+const buildRoleScopeInstructions = (role: Role) => {
+  if (role === "ADMIN") {
+    return [
+      "ADMIN scope: platform revenue, discount decisions, user management, moderation, suspicious behavior, catalog operations, and platform-level analytics.",
+      "If an admin asks about customer recommendation or personal shopping advice, keep it brief and redirect toward admin-relevant analysis.",
+    ].join("\n");
+  }
+
+  if (role === "DEVELOPER") {
+    return [
+      "DEVELOPER scope: only their own games, their own reviews, their own pricing questions, their own sales signals, and portfolio strategy.",
+      "Do not answer platform-wide user-management, moderation, or global revenue questions for developers.",
+      "Developers may discuss discount strategy for their own titles, but they cannot directly manage platform-wide discounts or other developers' games.",
+    ].join("\n");
+  }
+
+  return [
+    "CUSTOMER scope: catalog browsing, recommendations, ratings, reviews, wishlist, cart, owned library, and purchase help.",
+    "Do not answer platform finance, developer business strategy, moderation, user management, or admin-only operational questions for customers.",
+  ].join("\n");
+};
+
 const buildInstructions = ({
   role,
   context,
@@ -240,6 +274,7 @@ const buildInstructions = ({
     "You must sound natural and human. Do not use canned templates, numbered boilerplate, or repetitive stock phrases unless the user explicitly asks for a structured report.",
     "Answer only questions that are directly related to SteamLite, its catalog, gameplay recommendations, reviews, moderation, pricing, discounts, purchases, users, developers, or marketplace operations.",
     "If the user goes off topic, politely refuse and briefly mention the SteamLite topics you can help with.",
+    buildRoleScopeInstructions(role),
     "Treat the STEAMLITE_APP_CONTEXT block as your primary factual source of truth. Do not invent titles, prices, reviews, users, orders, bans, discounts, or moderation events that are missing from the context.",
     "Never invent admin pages, discount settings screens, campaign tables, or workflow steps that are not explicitly supported by the context.",
     "For strategy or analysis questions, ground the answer in the current data. Mention the concrete titles, metrics, or patterns from context that support your recommendation.",
@@ -336,7 +371,7 @@ const callLlm = async ({
       throw new AppError(502, "The AI provider returned an empty response.");
     }
 
-    return reply;
+    return sanitizeAssistantReply(reply);
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
@@ -723,7 +758,7 @@ const buildAdminContext = async ({ message }: { message: string }) => {
     )} | developers=${formatCurrency(overallRevenueSplit.developerRevenue)} | commissionPercent=${Math.round(
       PLATFORM_COMMISSION_RATE * 100
     )}%`,
-    "Discount system status: there is no dedicated discount campaign table or persisted discount workflow in the current app database. Any discount advice should be framed as a strategy recommendation based on current catalog, sales, wishlist, and review data.",
+    "Discount system status: admins can set per-game discount percentages directly on catalog entries. Developers can discuss discount strategy for their own games, but only admins can apply discounts in the current product.",
     mentionsUsers || (!mentionsRevenue && !mentionsModeration)
       ? [
           "Users snapshot:",

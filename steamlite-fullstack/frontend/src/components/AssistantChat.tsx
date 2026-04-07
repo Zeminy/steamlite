@@ -11,14 +11,14 @@ type ChatMessage = {
 
 const getScopeCopy = (role?: Role) => {
   if (role === "DEVELOPER") {
-    return "Pricing, review summaries, discount ideas, player feedback, and revenue insight for your games.";
+    return "Pricing, review summaries, discount ideas, player feedback, and revenue insight for your own games only.";
   }
 
   if (role === "ADMIN") {
     return "Moderation, toxic reviews, suspicious behavior, discount strategy, and revenue split.";
   }
 
-  return "Game recommendations, budget advice, ratings, reviews, wishlist, cart, library, and purchase help.";
+  return "Game recommendations, budget advice, ratings, reviews, wishlist, cart, library, and purchase help. No admin or developer business topics.";
 };
 
 const buildWelcomeMessage = (role?: Role): ChatMessage => ({
