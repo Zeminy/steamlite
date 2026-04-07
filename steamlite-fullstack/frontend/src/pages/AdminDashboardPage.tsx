@@ -212,6 +212,7 @@ export const AdminDashboardPage = () => {
           selectedGame={selectedGame}
           onSubmit={submitGame}
           onCancel={() => setSelectedGame(null)}
+          showDiscountField
         />
 
         <div className="panel">
@@ -228,6 +229,7 @@ export const AdminDashboardPage = () => {
                   <th>Genre</th>
                   <th>Developer</th>
                   <th>Price</th>
+                  <th>Discount</th>
                   <th>Release</th>
                   <th></th>
                 </tr>
@@ -238,7 +240,17 @@ export const AdminDashboardPage = () => {
                     <td>{game.title}</td>
                     <td>{game.genre || "Uncategorized"}</td>
                     <td>{game.developerCompany}</td>
-                    <td>${game.price.toFixed(2)}</td>
+                    <td>
+                      {game.isDiscounted ? (
+                        <div>
+                          <div>${(game.finalPrice || game.price).toFixed(2)}</div>
+                          <div className="muted price-strike">${(game.basePrice || game.price).toFixed(2)}</div>
+                        </div>
+                      ) : (
+                        `$${game.price.toFixed(2)}`
+                      )}
+                    </td>
+                    <td>{game.discountPercent ? `${game.discountPercent}%` : "-"}</td>
                     <td>{new Date(game.releaseDate).toLocaleDateString()}</td>
                     <td className="actions-inline">
                       <button

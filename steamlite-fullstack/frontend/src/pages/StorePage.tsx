@@ -120,7 +120,9 @@ export const StorePage = () => {
   const summary = useMemo(
     () => ({
       count: games.length,
-      cheapest: games.length ? Math.min(...games.map((game) => game.price)).toFixed(2) : "0.00",
+      cheapest: games.length
+        ? Math.min(...games.map((game) => game.finalPrice ?? game.price)).toFixed(2)
+        : "0.00",
     }),
     [games]
   );

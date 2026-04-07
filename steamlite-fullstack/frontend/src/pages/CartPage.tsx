@@ -110,7 +110,12 @@ export const CartPage = () => {
                         <strong>{item.game.title}</strong>
                         <div className="muted">{item.game.developerCompany}</div>
                       </td>
-                      <td>${item.game.price.toFixed(2)}</td>
+                      <td>
+                        ${((item.game.finalPrice ?? item.game.price)).toFixed(2)}
+                        {item.game.isDiscounted && (
+                          <div className="muted price-strike">${((item.game.basePrice ?? item.game.price)).toFixed(2)}</div>
+                        )}
+                      </td>
                       <td>{item.quantity}</td>
                       <td>${item.lineTotal.toFixed(2)}</td>
                       <td>

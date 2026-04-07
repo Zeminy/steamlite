@@ -105,6 +105,7 @@ export const DeveloperGamesPage = () => {
           developers={[]}
           heading={selectedGame ? "Edit your game" : "Create a new game"}
           showDeveloperField={false}
+          showDiscountField={false}
           selectedGame={selectedGame}
           onSubmit={submitGame}
           onCancel={() => setSelectedGame(null)}
@@ -129,6 +130,7 @@ export const DeveloperGamesPage = () => {
                     <th>Title</th>
                     <th>Genre</th>
                     <th>Price</th>
+                    <th>Discount</th>
                     <th>Release</th>
                     <th>Reviews</th>
                     <th></th>
@@ -139,7 +141,17 @@ export const DeveloperGamesPage = () => {
                     <tr key={game.id}>
                       <td>{game.title}</td>
                       <td>{game.genre || "Uncategorized"}</td>
-                      <td>${game.price.toFixed(2)}</td>
+                      <td>
+                        {game.isDiscounted ? (
+                          <div>
+                            <div>${(game.finalPrice || game.price).toFixed(2)}</div>
+                            <div className="muted price-strike">${(game.basePrice || game.price).toFixed(2)}</div>
+                          </div>
+                        ) : (
+                          `$${game.price.toFixed(2)}`
+                        )}
+                      </td>
+                      <td>{game.discountPercent ? `${game.discountPercent}% by admin` : "-"}</td>
                       <td>{new Date(game.releaseDate).toLocaleDateString()}</td>
                       <td>{game.reviewCount || 0}</td>
                       <td className="actions-inline">

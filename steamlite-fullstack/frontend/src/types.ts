@@ -15,6 +15,10 @@ export type Game = {
   title: string;
   description: string;
   price: number;
+  basePrice?: number;
+  discountPercent?: number;
+  finalPrice?: number;
+  isDiscounted?: boolean;
   genre?: string | null;
   coverImageUrl?: string | null;
   releaseDate: string;
@@ -74,6 +78,9 @@ export type LibraryItem = {
 export type OrderItem = {
   id: number;
   quantity: number;
+  baseUnitPrice?: number;
+  discountPercent?: number;
+  finalUnitPrice?: number;
   lineTotal: number;
   game: Game;
 };
@@ -91,6 +98,9 @@ export type Order = {
   userId: number;
   orderDate: string;
   totalAmount: number;
+  platformRevenue?: number;
+  developerRevenue?: number;
+  commissionRate?: number;
   status: string;
   payment: Payment | null;
   items: OrderItem[];
@@ -164,6 +174,7 @@ export type GamePayload = {
   title: string;
   description: string;
   price: number;
+  discountPercent?: number;
   genre?: string;
   coverImageUrl?: string;
   releaseDate: string;

@@ -559,6 +559,28 @@ textarea {
   white-space: nowrap;
 }
 
+.price-block {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: end;
+}
+
+.price-strike {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  opacity: 0.8;
+}
+
+.discount-badge {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #a7f3d0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .meta-row {
   flex-wrap: wrap;
   color: #cbd5e1;

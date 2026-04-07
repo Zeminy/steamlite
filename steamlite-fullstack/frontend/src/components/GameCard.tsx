@@ -23,6 +23,8 @@ export const GameCard = ({
   onAddToWishlist,
 }: GameCardProps) => {
   const addToCartLabel = hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart";
+  const displayPrice = game.finalPrice ?? game.price;
+  const basePrice = game.basePrice ?? game.price;
 
   return (
     <article className="game-card">
@@ -42,7 +44,10 @@ export const GameCard = ({
             </h3>
             <p className="muted">{game.developerCompany || "Independent studio"}</p>
           </div>
-          <div className="price-tag">${game.price.toFixed(2)}</div>
+          <div className="price-block">
+            <div className="price-tag">${displayPrice.toFixed(2)}</div>
+            {game.isDiscounted && <div className="muted price-strike">${basePrice.toFixed(2)}</div>}
+          </div>
         </div>
 
         <p className="game-description">{game.description}</p>

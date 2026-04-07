@@ -8,12 +8,14 @@ type AdminGameFormProps = {
   onCancel: () => void;
   heading?: string;
   showDeveloperField?: boolean;
+  showDiscountField?: boolean;
 };
 
 const emptyForm: GamePayload = {
   title: "",
   description: "",
   price: 0,
+  discountPercent: 0,
   genre: "",
   coverImageUrl: "",
   releaseDate: "",
@@ -27,6 +29,7 @@ export const AdminGameForm = ({
   onCancel,
   heading,
   showDeveloperField = true,
+  showDiscountField = true,
 }: AdminGameFormProps) => {
   const [form, setForm] = useState<GamePayload>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
@@ -37,6 +40,7 @@ export const AdminGameForm = ({
         title: selectedGame.title,
         description: selectedGame.description,
         price: selectedGame.price,
+        discountPercent: selectedGame.discountPercent || 0,
         genre: selectedGame.genre || "",
         coverImageUrl: selectedGame.coverImageUrl || "",
         releaseDate: selectedGame.releaseDate.slice(0, 10),
@@ -52,6 +56,8 @@ export const AdminGameForm = ({
       ...current,
       [name]:
         name === "price"
+          ? Number(value)
+          : name === "discountPercent"
           ? Number(value)
           : name === "developerId"
           ? (value === "" ? "" : Number(value))
@@ -114,6 +120,20 @@ export const AdminGameForm = ({
           required
         />
       </label>
+
+      {showDiscountField && (
+        <label>
+          Discount (%)
+          <input
+            type="number"
+            step="1"
+            min="0"
+            max="90"
+            value={form.discountPercent || 0}
+            onChange={(event) => handleChange("discountPercent", event.target.value)}
+          />
+        </label>
+      )}
 
       <label>
         Release date

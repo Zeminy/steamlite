@@ -91,6 +91,8 @@ export const GameDetailsPage = () => {
     () => game?.reviews.find((review) => review.userId === user?.id),
     [game, user?.id]
   );
+  const displayPrice = game?.finalPrice ?? game?.price ?? 0;
+  const basePrice = game?.basePrice ?? game?.price ?? 0;
 
   const isOwned = libraryGameIds.includes(gameId);
   const hasFullAccess = Boolean(
@@ -221,7 +223,15 @@ export const GameDetailsPage = () => {
           </div>
 
           <div className="detail-actions">
-            <div className="price-tag">${game.price.toFixed(2)}</div>
+            <div className="price-block">
+              <div className="price-tag">${displayPrice.toFixed(2)}</div>
+              {game.isDiscounted && (
+                <>
+                  <div className="muted price-strike">${basePrice.toFixed(2)}</div>
+                  <div className="discount-badge">{game.discountPercent}% OFF</div>
+                </>
+              )}
+            </div>
             <button
               className="button button-primary"
               disabled={busy !== null || isOwned || hasFullAccess}
