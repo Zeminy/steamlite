@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { calculateDiscountedPrice } from "../src/utils/pricing";
 import { calculateRevenueSplit } from "../src/utils/revenue";
 
-const prisma = new PrismaClient();
+const prisma: any = new PrismaClient();
 
 const hash = (value: string) => bcrypt.hash(value, 10);
 
@@ -226,19 +226,23 @@ const gameSeeds: GameSeed[] = [
 ];
 
 async function main() {
-  await prisma.review.deleteMany();
-  await prisma.libraryItem.deleteMany();
-  await prisma.payment.deleteMany();
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.wishlistItem.deleteMany();
-  await prisma.wishlist.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.game.deleteMany();
-  await prisma.admin.deleteMany();
-  await prisma.developer.deleteMany();
-  await prisma.user.deleteMany();
+  await prisma.$transaction([
+    prisma.emailDelivery.deleteMany(),
+    prisma.pendingRegistration.deleteMany(),
+    prisma.payment.deleteMany(),
+    prisma.orderItem.deleteMany(),
+    prisma.order.deleteMany(),
+    prisma.libraryItem.deleteMany(),
+    prisma.review.deleteMany(),
+    prisma.cartItem.deleteMany(),
+    prisma.wishlistItem.deleteMany(),
+    prisma.game.deleteMany(),
+    prisma.admin.deleteMany(),
+    prisma.developer.deleteMany(),
+    prisma.cart.deleteMany(),
+    prisma.wishlist.deleteMany(),
+    prisma.user.deleteMany(),
+  ]);
 
   const adminUser = await prisma.user.create({
     data: {
@@ -442,10 +446,18 @@ async function main() {
         .toFixed(2)
     );
     const revenueSplit = calculateRevenueSplit(totalAmount);
+    const receiptEmail = customers.find((customer) => customer.id === orderSeed.userId)?.email;
+    const confirmationCode = `SL-SEED-${orderSeed.userId}-${orderSeed.orderDate.getTime()}`;
+    const confirmedAt = new Date(orderSeed.orderDate.getTime() + 60 * 1000);
+    const user = customers.find((customer) => customer.id === orderSeed.userId);
 
-    await prisma.order.create({
+    const order = await prisma.order.create({
       data: {
         userId: orderSeed.userId,
+        receiptEmail: receiptEmail || "receipt@steamlite.local",
+        confirmationCode,
+        confirmedAt,
+        confirmationSentAt: confirmedAt,
         status: "COMPLETED",
         totalAmount,
         platformRevenue: revenueSplit.platformRevenue,
@@ -469,10 +481,24 @@ async function main() {
           create: {
             amount: totalAmount,
             paymentMethod: orderSeed.paymentMethod,
-            paymentDate: new Date(orderSeed.orderDate.getTime() + 60 * 1000),
+            paymentDate: confirmedAt,
             status: "SUCCESS",
           },
         },
+      },
+    });
+
+    await prisma.emailDelivery.create({
+      data: {
+        userId: user?.id || null,
+        orderId: order.id,
+        recipient: receiptEmail || "receipt@steamlite.local",
+        subject: `SteamLite order #${order.id} confirmed`,
+        template: "ORDER_CONFIRMATION",
+        bodyText: `Thanks for your purchase. Order #${order.id} has been confirmed.`,
+        status: "SIMULATED",
+        provider: "APP_PREVIEW",
+        sentAt: confirmedAt,
       },
     });
 

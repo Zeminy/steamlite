@@ -15,6 +15,9 @@ model User {
   password   String
   role       String     @default("CUSTOMER")
   isBanned   Boolean    @default(false)
+  failedLoginAttempts Int @default(0)
+  lockedUntil DateTime?
+  marketingEmails Boolean @default(false)
   deletedAt  DateTime?
   deletedReason String?
   createdAt  DateTime   @default(now())
@@ -25,6 +28,20 @@ model User {
   orders     Order[]
   reviews    Review[]
   library    LibraryItem[]
+  emailDeliveries EmailDelivery[]
+}
+
+model PendingRegistration {
+  id                   Int      @id @default(autoincrement()) @map("PendingRegistrationID")
+  username             String   @unique
+  email                String   @unique
+  passwordHash         String
+  marketingEmails      Boolean  @default(false)
+  verificationCodeHash String
+  verificationSentAt   DateTime
+  verificationAttempts Int      @default(0)
+  expiresAt            DateTime
+  createdAt            DateTime @default(now())
 }
 
 model Developer {
@@ -86,6 +103,10 @@ model Order {
   userId      Int
   orderDate   DateTime    @default(now())
   totalAmount Float
+  receiptEmail String     @default("")
+  confirmationCode String @default("")
+  confirmedAt DateTime?
+  confirmationSentAt DateTime?
   platformRevenue Float   @default(0)
   developerRevenue Float  @default(0)
   commissionRate Float    @default(0.3)
@@ -93,6 +114,7 @@ model Order {
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   items       OrderItem[]
   payment     Payment?
+  emailDeliveries EmailDelivery[]
 }
 
 model OrderItem {
@@ -114,6 +136,9 @@ model Payment {
   paymentDate    DateTime     @default(now())
   paymentMethod  String        @default("CREDIT_CARD")
   status         String        @default("PENDING")
+  providerReference String?
+  cardBrand     String?
+  last4         String?
   order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
@@ -156,4 +181,19 @@ model LibraryItem {
   game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([userId, gameId])
+}
+
+model EmailDelivery {
+  id        Int      @id @default(autoincrement()) @map("EmailDeliveryID")
+  userId    Int?
+  orderId   Int?
+  recipient String
+  subject   String
+  template  String
+  bodyText  String
+  status    String   @default("SIMULATED")
+  provider  String   @default("APP_PREVIEW")
+  sentAt    DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
 }
