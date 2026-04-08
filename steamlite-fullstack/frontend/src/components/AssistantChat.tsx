@@ -24,7 +24,7 @@ const getScopeCopy = (role?: Role) => {
 const buildWelcomeMessage = (role?: Role): ChatMessage => ({
   id: 1,
   role: "assistant",
-  content: `Ask me naturally in Vietnamese or English. I only support SteamLite topics. Right now I can help with ${getScopeCopy(role).toLowerCase()}`,
+  content: `Ask me naturally in Vietnamese or English. I stay inside SteamLite topics only. Right now I can help with ${getScopeCopy(role).toLowerCase()}`,
 });
 
 export const AssistantChat = ({
@@ -128,8 +128,8 @@ export const AssistantChat = ({
     <section className={`panel assistant-panel ${compact ? "assistant-panel-compact" : ""}`}>
       <div className="assistant-header">
         <div className="assistant-header-copy">
-          {compact ? null : <span className="eyebrow">SteamLite assistant</span>}
-          <h3>{compact ? "SteamLite AI" : "Role-aware AI support"}</h3>
+          {compact ? null : <span className="eyebrow">SteamLite guide</span>}
+          <h3>{compact ? "SteamLite Guide" : "Role-aware store guide"}</h3>
           <p className={compact ? "assistant-role-pill" : "muted"}>
             {compact ? `${user.role.toLowerCase()} mode` : getScopeCopy(user.role)}
           </p>
@@ -156,7 +156,7 @@ export const AssistantChat = ({
                 : "assistant-message assistant-message-user"
             }
           >
-            <strong>{message.role === "assistant" ? "SteamLite AI" : "You"}</strong>
+            <strong>{message.role === "assistant" ? "SteamLite Guide" : "You"}</strong>
             <p>{message.content}</p>
           </article>
         ))}

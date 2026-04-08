@@ -77,10 +77,10 @@ export const AssistantWidget = () => {
         className="assistant-widget-toggle"
         onPointerDown={handlePointerDown}
         onClick={handleToggle}
-        aria-label={open ? "Close SteamLite assistant" : "Open SteamLite assistant"}
-        title="Drag left or right to move this chat bubble"
+        aria-label={open ? "Close SteamLite Guide" : "Open SteamLite Guide"}
+        title="Drag left or right to move SteamLite Guide"
       >
-        <span>AI</span>
+        <span>...</span>
       </button>
     </div>
   );

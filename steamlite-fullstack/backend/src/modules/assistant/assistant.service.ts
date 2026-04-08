@@ -431,7 +431,7 @@ const buildCustomerContext = async ({
 
   const ownedGameIds = new Set(ownedItems.map((item) => item.gameId));
   const wishlistGameIds = new Set(wishlistItems.map((item) => item.gameId));
-  const mentionedGame = pickMentionedGame(games, message);
+  const mentionedGame = pickMentionedGame(games, message) as CatalogGame | null;
   const candidateGames = pickRelevantGames(games, message, mentionedGame ? 8 : 10);
   const budget = parseBudget(message);
 
@@ -521,7 +521,10 @@ const buildDeveloperContext = async ({
     take: 40,
   });
 
-  const focusedGame = pickMentionedGame(developer.games, message) || developer.games[0] || null;
+  const focusedGame =
+    (pickMentionedGame(developer.games, message) as (typeof developer.games)[number] | null) ||
+    developer.games[0] ||
+    null;
   const comparableGames =
     focusedGame?.genre
       ? comparableCatalog.filter((game) => normalize(game.genre || "") === normalize(focusedGame.genre || "")).slice(0, 5)
