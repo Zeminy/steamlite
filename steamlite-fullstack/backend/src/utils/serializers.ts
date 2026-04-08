@@ -67,6 +67,10 @@ export const serializeOrder = (order: any) => ({
   userId: order.userId,
   orderDate: order.orderDate,
   totalAmount: order.totalAmount,
+  receiptEmail: order.receiptEmail,
+  confirmationCode: order.confirmationCode,
+  confirmedAt: order.confirmedAt,
+  confirmationSentAt: order.confirmationSentAt,
   platformRevenue: order.platformRevenue,
   developerRevenue: order.developerRevenue,
   commissionRate: order.commissionRate,
@@ -78,8 +82,20 @@ export const serializeOrder = (order: any) => ({
         paymentDate: order.payment.paymentDate,
         paymentMethod: order.payment.paymentMethod,
         status: order.payment.status,
+        providerReference: order.payment.providerReference,
+        cardBrand: order.payment.cardBrand,
+        last4: order.payment.last4,
       }
     : null,
+  emailDeliveries: (order.emailDeliveries || []).map((delivery: any) => ({
+    id: delivery.id,
+    recipient: delivery.recipient,
+    subject: delivery.subject,
+    template: delivery.template,
+    status: delivery.status,
+    provider: delivery.provider,
+    sentAt: delivery.sentAt,
+  })),
   items: (order.items || []).map((item: any) => {
     const fallbackFinalUnitPrice =
       item.finalUnitPrice && item.finalUnitPrice > 0

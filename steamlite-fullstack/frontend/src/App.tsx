@@ -10,6 +10,7 @@ import { CartPage } from "./pages/CartPage";
 import { DeveloperGamesPage } from "./pages/DeveloperGamesPage";
 import { GameDetailsPage } from "./pages/GameDetailsPage";
 import { LibraryPage } from "./pages/LibraryPage";
+import { OrderConfirmationPage } from "./pages/OrderConfirmationPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { StorePage } from "./pages/StorePage";
 import { VerifyCodePage } from "./pages/VerifyCodePage";
@@ -21,10 +22,10 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-              <Route element={<Layout />}>
-              <Route path="/auth/verify-code" element={<VerifyCodePage />} />
+            <Route element={<Layout />}>
               <Route index element={<StorePage />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/auth/verify-code" element={<VerifyCodePage />} />
               <Route path="/games/:id" element={<GameDetailsPage />} />
 
               <Route element={<ProtectedRoute />}>
@@ -33,6 +34,7 @@ export default function App() {
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/orders" element={<OrdersPage />} />
+                <Route path="/orders/:id/confirmation" element={<OrderConfirmationPage />} />
               </Route>
 
               <Route element={<ProtectedRoute requiredRole="DEVELOPER" />}>

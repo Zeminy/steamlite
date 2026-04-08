@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiRequest, ApiError } from "../api/client";
 import { Order } from "../types";
 
@@ -81,8 +82,16 @@ export const OrdersPage = () => {
                 </div>
 
                 {order.payment && (
-                  <div className="payment-tag">
-                    Payment: {order.payment.paymentMethod.replace(/_/g, " ")} · {order.payment.status}
+                  <div className="stack-gap">
+                    <div className="payment-tag">
+                      Payment: {order.payment.paymentMethod.replace(/_/g, " ")} · {order.payment.status}
+                    </div>
+                    <div className="summary-row">
+                      <span className="muted">{order.receiptEmail || order.user?.email || "Receipt available"}</span>
+                      <Link className="button button-secondary button-link" to={`/orders/${order.id}/confirmation`}>
+                        View confirmation
+                      </Link>
+                    </div>
                   </div>
                 )}
               </article>

@@ -6,6 +6,7 @@ export type User = {
   email: string;
   role: Role;
   isBanned?: boolean;
+  marketingEmails?: boolean;
   deletedAt?: string | null;
   createdAt?: string;
 };
@@ -91,6 +92,19 @@ export type Payment = {
   paymentDate: string;
   paymentMethod: string;
   status: string;
+  providerReference?: string | null;
+  cardBrand?: string | null;
+  last4?: string | null;
+};
+
+export type EmailDelivery = {
+  id: number;
+  recipient: string;
+  subject: string;
+  template: string;
+  status: string;
+  provider: string;
+  sentAt: string;
 };
 
 export type Order = {
@@ -98,11 +112,16 @@ export type Order = {
   userId: number;
   orderDate: string;
   totalAmount: number;
+  receiptEmail?: string;
+  confirmationCode?: string;
+  confirmedAt?: string | null;
+  confirmationSentAt?: string | null;
   platformRevenue?: number;
   developerRevenue?: number;
   commissionRate?: number;
   status: string;
   payment: Payment | null;
+  emailDeliveries?: EmailDelivery[];
   items: OrderItem[];
   user?: {
     username: string;
@@ -188,4 +207,34 @@ export type AssistantChatResponse = {
 export type AssistantChatMessagePayload = {
   role: "assistant" | "user";
   content: string;
+};
+
+export type CheckoutPreview = {
+  receiptEmail: string;
+  paymentMethods: string[];
+  cart: {
+    totalItems: number;
+    totalAmount: number;
+    items: {
+      id: number;
+      quantity: number;
+      gameId: number;
+      title: string;
+      developerCompany?: string;
+      baseUnitPrice: number;
+      discountPercent: number;
+      finalUnitPrice: number;
+    }[];
+  };
+};
+
+export type CheckoutResult = {
+  message: string;
+  order: Order;
+  emailDelivery: {
+    recipient: string;
+    status: string;
+    sentAt: string | null;
+    provider: string;
+  } | null;
 };
