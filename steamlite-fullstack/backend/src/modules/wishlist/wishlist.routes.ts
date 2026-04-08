@@ -4,7 +4,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { AppError } from "../../utils/appError";
 import { requireAuth } from "../../middlewares/auth";
 import { serializeGame } from "../../utils/serializers";
-import { gameWithRelationsInclude } from "../games/game.shared";
+import { gameWithRelationsInclude, getGameAccessState } from "../games/game.shared";
 
 export const wishlistRouter = Router();
 
@@ -29,11 +29,41 @@ wishlistRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const wishlist = await getOrCreateWishlist(req.user!.id);
+    const ownedGameIds = new Set(
+      (
+        await prisma.libraryItem.findMany({
+          where: {
+            userId: req.user!.id,
+          },
+          select: {
+            gameId: true,
+          },
+        })
+      ).map((item) => item.gameId)
+    );
+
+    if (ownedGameIds.size > 0) {
+      const wishlistItemIdsToRemove = wishlist.items
+        .filter((item) => ownedGameIds.has(item.game.id))
+        .map((item) => item.id);
+
+      if (wishlistItemIdsToRemove.length > 0) {
+        await prisma.wishlistItem.deleteMany({
+          where: {
+            id: {
+              in: wishlistItemIdsToRemove,
+            },
+          },
+        });
+      }
+    }
+
+    const refreshedWishlist = await getOrCreateWishlist(req.user!.id);
 
     res.json({
       wishlist: {
-        id: wishlist.id,
-        items: wishlist.items.map((item) => ({
+        id: refreshedWishlist.id,
+        items: refreshedWishlist.items.map((item) => ({
           id: item.id,
           game: serializeGame(item.game),
         })),
@@ -52,12 +82,22 @@ wishlistRouter.post(
       throw new AppError(400, "Invalid game id.");
     }
 
-    const game = await prisma.game.findUnique({
-      where: { id: gameId },
+    const access = await getGameAccessState({
+      gameId,
+      userId: req.user!.id,
+      role: req.user!.role,
     });
 
-    if (!game) {
+    if (!access.game) {
       throw new AppError(404, "Game not found.");
+    }
+
+    if (access.hasLibraryOwnership) {
+      throw new AppError(409, "This game is already in your library.");
+    }
+
+    if (access.hasIntrinsicAccess) {
+      throw new AppError(409, "You already have full access to this game.");
     }
 
     const wishlist = await getOrCreateWishlist(req.user!.id);

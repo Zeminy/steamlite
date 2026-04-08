@@ -100,6 +100,13 @@ export const GameDetailsPage = () => {
   );
   const canReview = Boolean(user && (isOwned || hasFullAccess));
   const isWishlisted = wishlistGameIds.includes(gameId);
+  const wishlistLabel = hasFullAccess
+    ? "Full access"
+    : isOwned
+    ? "In library"
+    : isWishlisted
+    ? "In wishlist"
+    : "Add to wishlist";
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -240,8 +247,12 @@ export const GameDetailsPage = () => {
             >
               {hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart"}
             </button>
-            <button className="button button-secondary" disabled={busy !== null} onClick={handleAddToWishlist}>
-              {isWishlisted ? "In wishlist" : "Add to wishlist"}
+            <button
+              className="button button-secondary"
+              disabled={busy !== null || isOwned || hasFullAccess || isWishlisted}
+              onClick={handleAddToWishlist}
+            >
+              {wishlistLabel}
             </button>
           </div>
 

@@ -23,6 +23,13 @@ export const GameCard = ({
   onAddToWishlist,
 }: GameCardProps) => {
   const addToCartLabel = hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart";
+  const wishlistLabel = hasFullAccess
+    ? "Full access"
+    : isOwned
+    ? "In library"
+    : isWishlisted
+    ? "In wishlist"
+    : "Add to wishlist";
   const displayPrice = game.finalPrice ?? game.price;
   const basePrice = game.basePrice ?? game.price;
 
@@ -74,10 +81,10 @@ export const GameCard = ({
           {currentUser && (
             <button
               className="button button-secondary"
-              disabled={busy}
+              disabled={busy || hasFullAccess || isOwned || isWishlisted}
               onClick={() => onAddToWishlist(game.id)}
             >
-              {isWishlisted ? "In wishlist" : "Add to wishlist"}
+              {wishlistLabel}
             </button>
           )}
         </div>
