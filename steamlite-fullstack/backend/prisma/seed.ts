@@ -503,7 +503,17 @@ const gameSeeds: GameSeed[] = [
     releaseDate: "2017-07-25",
     developerCompany: "IndieForge Studio",
   },
-];
+  {
+    title: "Persona 5 Royal",
+    description: "Don the mask and join the Phantom Thieves of Hearts as they stage grand heists, infiltrate the minds of the corrupt, and make them change their ways!",
+    price: 59.99,
+    discountPercent: 0,
+    genre: "JRPG, Turn-based Combat",
+    coverImageUrl: "/assets/persona-5-royal.jpg",
+    releaseDate: "2022-10-21",
+    developerCompany: "Aurora Byteworks",
+  },
+  ];
 
 async function main() {
   await prisma.review.deleteMany();
