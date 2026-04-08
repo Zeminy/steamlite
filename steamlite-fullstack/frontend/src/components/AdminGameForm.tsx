@@ -1,21 +1,36 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Game, GamePayload } from "../types";
+import { AdminDeveloper, Game, GamePayload } from "../types";
 
 type AdminGameFormProps = {
+  developers: AdminDeveloper[];
   selectedGame: Game | null;
   onSubmit: (payload: GamePayload) => Promise<void>;
   onCancel: () => void;
+  heading?: string;
+  showDeveloperField?: boolean;
+  showDiscountField?: boolean;
 };
 
 const emptyForm: GamePayload = {
   title: "",
   description: "",
   price: 0,
+  discountPercent: 0,
+  genre: "",
+  coverImageUrl: "",
   releaseDate: "",
-  developerId: 1,
+  developerId: "",
 };
 
-export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFormProps) => {
+export const AdminGameForm = ({
+  developers,
+  selectedGame,
+  onSubmit,
+  onCancel,
+  heading,
+  showDeveloperField = true,
+  showDiscountField = true,
+}: AdminGameFormProps) => {
   const [form, setForm] = useState<GamePayload>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
 
@@ -25,8 +40,11 @@ export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFor
         title: selectedGame.title,
         description: selectedGame.description,
         price: selectedGame.price,
+        discountPercent: selectedGame.discountPercent || 0,
+        genre: selectedGame.genre || "",
+        coverImageUrl: selectedGame.coverImageUrl || "",
         releaseDate: selectedGame.releaseDate.slice(0, 10),
-        developerId: selectedGame.developerId || 1,
+        developerId: selectedGame.developerId || "",
       });
     } else {
       setForm(emptyForm);
@@ -38,6 +56,8 @@ export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFor
       ...current,
       [name]:
         name === "price"
+          ? Number(value)
+          : name === "discountPercent"
           ? Number(value)
           : name === "developerId"
           ? (value === "" ? "" : Number(value))
@@ -62,7 +82,7 @@ export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFor
   return (
     <form className="panel form-grid" onSubmit={handleSubmit}>
       <div className="section-header">
-        <h3>{selectedGame ? "Edit game" : "Create new game"}</h3>
+        <h3>{heading || (selectedGame ? "Edit game" : "Create new game")}</h3>
         {selectedGame && (
           <button type="button" className="button button-secondary" onClick={onCancel}>
             Cancel edit
@@ -101,6 +121,20 @@ export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFor
         />
       </label>
 
+      {showDiscountField && (
+        <label>
+          Discount (%)
+          <input
+            type="number"
+            step="1"
+            min="0"
+            max="90"
+            value={form.discountPercent || 0}
+            onChange={(event) => handleChange("discountPercent", event.target.value)}
+          />
+        </label>
+      )}
+
       <label>
         Release date
         <input
@@ -112,14 +146,40 @@ export const AdminGameForm = ({ selectedGame, onSubmit, onCancel }: AdminGameFor
       </label>
 
       <label>
-        Developer ID
+        Genre
         <input
-          type="number"
-          min="1"
-          value={form.developerId}
-          onChange={(event) => handleChange("developerId", event.target.value)}
+          value={form.genre || ""}
+          onChange={(event) => handleChange("genre", event.target.value)}
+          placeholder="RPG, Strategy, Racing..."
         />
       </label>
+
+      <label>
+        Cover image URL
+        <input
+          type="url"
+          value={form.coverImageUrl || ""}
+          onChange={(event) => handleChange("coverImageUrl", event.target.value)}
+          placeholder="https://example.com/game-cover.jpg"
+        />
+      </label>
+
+      {showDeveloperField && (
+        <label>
+          Developer
+          <select
+            value={form.developerId}
+            onChange={(event) => handleChange("developerId", event.target.value)}
+          >
+            <option value="">Independent / no developer</option>
+            {developers.map((developer) => (
+              <option key={developer.id} value={developer.id}>
+                {developer.company} ({developer.username})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <button className="button button-primary" type="submit" disabled={submitting}>
         {submitting ? "Saving..." : selectedGame ? "Update game" : "Create game"}

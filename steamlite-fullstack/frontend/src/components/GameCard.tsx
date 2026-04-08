@@ -1,35 +1,60 @@
 import { Game, User } from "../types";
+import { Link } from "react-router-dom";
 
 type GameCardProps = {
   game: Game;
   currentUser: User | null;
   isWishlisted: boolean;
+  isOwned: boolean;
+  hasFullAccess: boolean;
   busy?: boolean;
   onAddToCart: (gameId: number) => void;
-  onToggleWishlist: (gameId: number) => void;
+  onAddToWishlist: (gameId: number) => void;
 };
 
 export const GameCard = ({
   game,
   currentUser,
   isWishlisted,
+  isOwned,
+  hasFullAccess,
   busy,
   onAddToCart,
-  onToggleWishlist,
+  onAddToWishlist,
 }: GameCardProps) => {
+  const addToCartLabel = hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart";
+  const wishlistLabel = hasFullAccess
+    ? "Full access"
+    : isOwned
+    ? "In library"
+    : isWishlisted
+    ? "In wishlist"
+    : "Add to wishlist";
+  const displayPrice = game.finalPrice ?? game.price;
+  const basePrice = game.basePrice ?? game.price;
+
   return (
     <article className="game-card">
-      <div className="game-banner">
-        <span>{game.title.slice(0, 2).toUpperCase()}</span>
-      </div>
+      <Link
+        to={`/games/${game.id}`}
+        className={game.coverImageUrl ? "game-banner game-banner-image" : "game-banner"}
+        style={game.coverImageUrl ? { backgroundImage: `url(${game.coverImageUrl})` } : undefined}
+      >
+        {!game.coverImageUrl && <span>{game.title.slice(0, 2).toUpperCase()}</span>}
+      </Link>
 
       <div className="game-card-body">
         <div className="game-card-top">
           <div>
-            <h3>{game.title}</h3>
+            <h3>
+              <Link to={`/games/${game.id}`}>{game.title}</Link>
+            </h3>
             <p className="muted">{game.developerCompany || "Independent studio"}</p>
           </div>
-          <div className="price-tag">${game.price.toFixed(2)}</div>
+          <div className="price-block">
+            <div className="price-tag">${displayPrice.toFixed(2)}</div>
+            {game.isDiscounted && <div className="muted price-strike">${basePrice.toFixed(2)}</div>}
+          </div>
         </div>
 
         <p className="game-description">{game.description}</p>
@@ -41,21 +66,25 @@ export const GameCard = ({
         </div>
 
         <div className="actions-row">
+          <Link className="button button-secondary button-link" to={`/games/${game.id}`}>
+            View details
+          </Link>
+
           <button
             className="button button-primary"
-            disabled={busy}
+            disabled={busy || hasFullAccess || isOwned}
             onClick={() => onAddToCart(game.id)}
           >
-            Add to cart
+            {addToCartLabel}
           </button>
 
           {currentUser && (
             <button
               className="button button-secondary"
-              disabled={busy}
-              onClick={() => onToggleWishlist(game.id)}
+              disabled={busy || hasFullAccess || isOwned || isWishlisted}
+              onClick={() => onAddToWishlist(game.id)}
             >
-              {isWishlisted ? "Remove wishlist" : "Save wishlist"}
+              {wishlistLabel}
             </button>
           )}
         </div>

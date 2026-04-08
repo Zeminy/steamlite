@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "../api/client";
-import { AdminOverview, AdminUser, Game, GamePayload, Order, Role } from "../types";
+import {
+  AdminDeveloper,
+  AdminOverview,
+  AdminUser,
+  Game,
+  GamePayload,
+  Order,
+  Role,
+} from "../types";
 import { AdminGameForm } from "../components/AdminGameForm";
 
 export const AdminDashboardPage = () => {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [developers, setDevelopers] = useState<AdminDeveloper[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -12,19 +21,29 @@ export const AdminDashboardPage = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  const loadData = async (resetMessage = true) => {
     setLoading(true);
-    setMessage("");
+    if (resetMessage) {
+      setMessage("");
+    }
 
     try {
-      const [overviewResponse, usersResponse, gamesResponse, ordersResponse] = await Promise.all([
+      const [
+        overviewResponse,
+        developersResponse,
+        usersResponse,
+        gamesResponse,
+        ordersResponse,
+      ] = await Promise.all([
         apiRequest<{ overview: AdminOverview }>("/admin/overview"),
+        apiRequest<{ developers: AdminDeveloper[] }>("/admin/developers"),
         apiRequest<{ users: AdminUser[] }>("/admin/users"),
         apiRequest<{ games: Game[] }>("/games"),
         apiRequest<{ orders: Order[] }>("/admin/orders"),
       ]);
 
       setOverview(overviewResponse.overview);
+      setDevelopers(developersResponse.developers);
       setUsers(usersResponse.users);
       setGames(gamesResponse.games);
       setOrders(ordersResponse.orders);
@@ -56,13 +75,17 @@ export const AdminDashboardPage = () => {
       }
 
       setSelectedGame(null);
-      await loadData();
+      await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to save game.");
     }
   };
 
   const deleteGame = async (gameId: number) => {
+    if (!window.confirm("Delete this game from the catalog? This action cannot be undone.")) {
+      return;
+    }
+
     try {
       await apiRequest(`/games/${gameId}`, {
         method: "DELETE",
@@ -71,7 +94,7 @@ export const AdminDashboardPage = () => {
       if (selectedGame?.id === gameId) {
         setSelectedGame(null);
       }
-      await loadData();
+      await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to delete game.");
     }
@@ -84,9 +107,37 @@ export const AdminDashboardPage = () => {
         body: JSON.stringify({ role }),
       });
       setMessage("User role updated.");
-      await loadData();
+      await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to update role.");
+    }
+  };
+
+  const toggleBan = async (userId: number, isBanned: boolean) => {
+    try {
+      await apiRequest(`/admin/users/${userId}/${isBanned ? "unban" : "ban"}`, {
+        method: "PATCH",
+      });
+      setMessage(isBanned ? "User unbanned." : "User banned.");
+      await loadData(false);
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Unable to update user status.");
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    if (!window.confirm("Delete this user account? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await apiRequest(`/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+      setMessage("User deleted.");
+      await loadData(false);
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Unable to delete user.");
     }
   };
 
@@ -106,7 +157,7 @@ export const AdminDashboardPage = () => {
             <span className="eyebrow">Admin dashboard</span>
             <h2>Manage platform operations</h2>
           </div>
-          <button className="button button-secondary" onClick={loadData}>
+          <button className="button button-secondary" onClick={() => loadData()}>
             Refresh dashboard
           </button>
         </div>
@@ -116,8 +167,12 @@ export const AdminDashboardPage = () => {
         {overview && (
           <div className="stat-grid">
             <article className="stat-card">
-              <span>Total users</span>
+              <span>Active users</span>
               <strong>{overview.usersCount}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Deleted users</span>
+              <strong>{overview.deletedUsersCount}</strong>
             </article>
             <article className="stat-card">
               <span>Total games</span>
@@ -128,8 +183,24 @@ export const AdminDashboardPage = () => {
               <strong>{overview.ordersCount}</strong>
             </article>
             <article className="stat-card">
-              <span>Total revenue</span>
-              <strong>${overview.revenue.toFixed(2)}</strong>
+              <span>Gross revenue</span>
+              <strong>${overview.grossRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Platform share</span>
+              <strong>${overview.platformRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Developer share</span>
+              <strong>${overview.developerRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Flagged reviews</span>
+              <strong>{overview.flaggedReviewCount}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Platform commission</span>
+              <strong>{Math.round(overview.commissionRate * 100)}%</strong>
             </article>
           </div>
         )}
@@ -137,9 +208,11 @@ export const AdminDashboardPage = () => {
 
       <section className="dashboard-grid">
         <AdminGameForm
+          developers={developers.filter((developer) => !developer.isBanned && !developer.deletedAt)}
           selectedGame={selectedGame}
           onSubmit={submitGame}
           onCancel={() => setSelectedGame(null)}
+          showDiscountField
         />
 
         <div className="panel">
@@ -153,8 +226,10 @@ export const AdminDashboardPage = () => {
               <thead>
                 <tr>
                   <th>Title</th>
+                  <th>Genre</th>
                   <th>Developer</th>
                   <th>Price</th>
+                  <th>Discount</th>
                   <th>Release</th>
                   <th></th>
                 </tr>
@@ -163,8 +238,19 @@ export const AdminDashboardPage = () => {
                 {games.map((game) => (
                   <tr key={game.id}>
                     <td>{game.title}</td>
+                    <td>{game.genre || "Uncategorized"}</td>
                     <td>{game.developerCompany}</td>
-                    <td>${game.price.toFixed(2)}</td>
+                    <td>
+                      {game.isDiscounted ? (
+                        <div>
+                          <div>${(game.finalPrice || game.price).toFixed(2)}</div>
+                          <div className="muted price-strike">${(game.basePrice || game.price).toFixed(2)}</div>
+                        </div>
+                      ) : (
+                        `$${game.price.toFixed(2)}`
+                      )}
+                    </td>
+                    <td>{game.discountPercent ? `${game.discountPercent}%` : "-"}</td>
                     <td>{new Date(game.releaseDate).toLocaleDateString()}</td>
                     <td className="actions-inline">
                       <button
@@ -188,6 +274,61 @@ export const AdminDashboardPage = () => {
       <section className="dashboard-grid">
         <div className="panel">
           <div className="section-header">
+            <h3>Flagged reviews</h3>
+            <span className="muted">{overview?.flaggedReviewCount || 0} flagged review(s)</span>
+          </div>
+
+          <div className="stack-gap">
+            {overview?.flaggedReviews.length ? (
+              overview.flaggedReviews.map((review) => (
+                <article key={review.id} className="review-card">
+                  <div className="review-header">
+                    <div>
+                      <strong>{review.user.username}</strong>
+                      <div className="muted">
+                        {review.game.title} - {new Date(review.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="price-tag">{review.rating}/5</div>
+                  </div>
+
+                  <p>{review.comment || "No written comment was left for this low review."}</p>
+                  <div className="flagged-review-reasons">
+                    {review.reasons.map((reason) => (
+                      <span key={`${review.id}-${reason}`} className="flagged-review-chip">
+                        {reason}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="actions-row">
+                    <button
+                      className="button button-secondary"
+                      disabled={Boolean(review.user.deletedAt)}
+                      onClick={() => toggleBan(review.user.id, review.user.isBanned)}
+                    >
+                      {review.user.isBanned ? "Unban user" : "Ban user"}
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      disabled={Boolean(review.user.deletedAt)}
+                      onClick={() => deleteUser(review.user.id)}
+                    >
+                      {review.user.deletedAt ? "Deleted" : "Delete user"}
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="empty-state">
+                <h3>No toxic reviews flagged</h3>
+                <p>The dashboard did not detect any clearly suspicious or hostile reviews right now.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="panel">
+          <div className="section-header">
             <h3>User management</h3>
             <span className="muted">{users.length} user(s)</span>
           </div>
@@ -198,9 +339,12 @@ export const AdminDashboardPage = () => {
                 <tr>
                   <th>User</th>
                   <th>Role</th>
+                  <th>Status</th>
+                  <th>Developer</th>
                   <th>Orders</th>
                   <th>Reviews</th>
                   <th>Change role</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,11 +355,14 @@ export const AdminDashboardPage = () => {
                       <div className="muted">{entry.email}</div>
                     </td>
                     <td>{entry.role}</td>
+                    <td>{entry.deletedAt ? "Deleted" : entry.isBanned ? "Banned" : "Active"}</td>
+                    <td>{entry.developerCompany || "-"}</td>
                     <td>{entry.orderCount}</td>
                     <td>{entry.reviewCount}</td>
                     <td>
                       <select
                         value={entry.role}
+                        disabled={Boolean(entry.deletedAt)}
                         onChange={(event) => updateRole(entry.id, event.target.value as Role)}
                       >
                         <option value="CUSTOMER">CUSTOMER</option>
@@ -223,34 +370,50 @@ export const AdminDashboardPage = () => {
                         <option value="ADMIN">ADMIN</option>
                       </select>
                     </td>
+                    <td className="actions-inline">
+                      <button
+                        className="button button-secondary"
+                        disabled={Boolean(entry.deletedAt)}
+                        onClick={() => toggleBan(entry.id, entry.isBanned)}
+                      >
+                        {entry.isBanned ? "Unban" : "Ban"}
+                      </button>
+                      <button
+                        className="button button-secondary"
+                        disabled={Boolean(entry.deletedAt)}
+                        onClick={() => deleteUser(entry.id)}
+                      >
+                        {entry.deletedAt ? "Deleted" : "Delete"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      </section>
 
-        <div className="panel">
-          <div className="section-header">
-            <h3>Recent orders</h3>
-            <span className="muted">{orders.length} total order(s)</span>
-          </div>
+      <section className="panel">
+        <div className="section-header">
+          <h3>Recent orders</h3>
+          <span className="muted">{orders.length} total order(s)</span>
+        </div>
 
-          <div className="stack-gap">
-            {orders.slice(0, 6).map((order) => (
-              <article key={order.id} className="order-item-row">
-                <div>
-                  <strong>
-                    #{order.id} · {order.user?.username || "Customer"}
-                  </strong>
-                  <div className="muted">
-                    {new Date(order.orderDate).toLocaleString()} · {order.payment?.paymentMethod}
-                  </div>
+        <div className="stack-gap">
+          {orders.slice(0, 6).map((order) => (
+            <article key={order.id} className="order-item-row">
+              <div>
+                <strong>
+                  #{order.id} - {order.user?.username || "Customer"}
+                </strong>
+                <div className="muted">
+                  {new Date(order.orderDate).toLocaleString()} - {order.payment?.paymentMethod}
                 </div>
-                <div className="price-tag">${order.totalAmount.toFixed(2)}</div>
-              </article>
-            ))}
-          </div>
+              </div>
+              <div className="price-tag">${order.totalAmount.toFixed(2)}</div>
+            </article>
+          ))}
         </div>
       </section>
     </div>

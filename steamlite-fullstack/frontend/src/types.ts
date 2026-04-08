@@ -5,6 +5,9 @@ export type User = {
   username: string;
   email: string;
   role: Role;
+  isBanned?: boolean;
+  marketingEmails?: boolean;
+  deletedAt?: string | null;
   createdAt?: string;
 };
 
@@ -13,13 +16,33 @@ export type Game = {
   title: string;
   description: string;
   price: number;
+  basePrice?: number;
+  discountPercent?: number;
+  finalPrice?: number;
+  isDiscounted?: boolean;
+  genre?: string | null;
+  coverImageUrl?: string | null;
   releaseDate: string;
   createdAt?: string;
   updatedAt?: string;
   developerId?: number | null;
+  developerUserId?: number | null;
   developerCompany?: string;
   reviewCount?: number;
   averageRating?: number;
+};
+
+export type Review = {
+  id: number;
+  userId: number;
+  username?: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+};
+
+export type GameDetail = Game & {
+  reviews: Review[];
 };
 
 export type CartItem = {
@@ -47,9 +70,18 @@ export type Wishlist = {
   items: WishlistItem[];
 };
 
+export type LibraryItem = {
+  id: number;
+  purchasedAt: string;
+  game: Game;
+};
+
 export type OrderItem = {
   id: number;
   quantity: number;
+  baseUnitPrice?: number;
+  discountPercent?: number;
+  finalUnitPrice?: number;
   lineTotal: number;
   game: Game;
 };
@@ -60,6 +92,19 @@ export type Payment = {
   paymentDate: string;
   paymentMethod: string;
   status: string;
+  providerReference?: string | null;
+  cardBrand?: string | null;
+  last4?: string | null;
+};
+
+export type EmailDelivery = {
+  id: number;
+  recipient: string;
+  subject: string;
+  template: string;
+  status: string;
+  provider: string;
+  sentAt: string;
 };
 
 export type Order = {
@@ -67,8 +112,16 @@ export type Order = {
   userId: number;
   orderDate: string;
   totalAmount: number;
+  receiptEmail?: string;
+  confirmationCode?: string;
+  confirmedAt?: string | null;
+  confirmationSentAt?: string | null;
+  platformRevenue?: number;
+  developerRevenue?: number;
+  commissionRate?: number;
   status: string;
   payment: Payment | null;
+  emailDeliveries?: EmailDelivery[];
   items: OrderItem[];
   user?: {
     username: string;
@@ -76,11 +129,37 @@ export type Order = {
   };
 };
 
+export type AdminFlaggedReview = {
+  id: number;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  reasons: string[];
+  game: {
+    id: number;
+    title: string;
+  };
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    isBanned: boolean;
+    deletedAt?: string | null;
+  };
+};
+
 export type AdminOverview = {
   usersCount: number;
+  deletedUsersCount: number;
   gamesCount: number;
   ordersCount: number;
   revenue: number;
+  grossRevenue: number;
+  platformRevenue: number;
+  developerRevenue: number;
+  commissionRate: number;
+  flaggedReviewCount: number;
+  flaggedReviews: AdminFlaggedReview[];
   recentOrders: Order[];
 };
 
@@ -89,15 +168,73 @@ export type AdminUser = {
   username: string;
   email: string;
   role: Role;
+  isBanned: boolean;
+  deletedAt?: string | null;
+  developerCompany?: string | null;
   createdAt: string;
   orderCount: number;
   reviewCount: number;
+};
+
+export type AdminDeveloper = {
+  id: number;
+  userId: number;
+  username: string;
+  email: string;
+  company: string;
+  profile?: string | null;
+  role: Role;
+  isBanned: boolean;
+  deletedAt?: string | null;
+  gamesCount: number;
 };
 
 export type GamePayload = {
   title: string;
   description: string;
   price: number;
+  discountPercent?: number;
+  genre?: string;
+  coverImageUrl?: string;
   releaseDate: string;
   developerId?: number | "";
+};
+
+export type AssistantChatResponse = {
+  response: string;
+};
+
+export type AssistantChatMessagePayload = {
+  role: "assistant" | "user";
+  content: string;
+};
+
+export type CheckoutPreview = {
+  receiptEmail: string;
+  paymentMethods: string[];
+  cart: {
+    totalItems: number;
+    totalAmount: number;
+    items: {
+      id: number;
+      quantity: number;
+      gameId: number;
+      title: string;
+      developerCompany?: string;
+      baseUnitPrice: number;
+      discountPercent: number;
+      finalUnitPrice: number;
+    }[];
+  };
+};
+
+export type CheckoutResult = {
+  message: string;
+  order: Order;
+  emailDelivery: {
+    recipient: string;
+    status: string;
+    sentAt: string | null;
+    provider: string;
+  } | null;
 };

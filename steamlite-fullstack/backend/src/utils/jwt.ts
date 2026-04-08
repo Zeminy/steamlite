@@ -1,6 +1,6 @@
-import { Role } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
+import { Role } from "../types/domain";
 
 export type JwtPayload = {
   userId: number;

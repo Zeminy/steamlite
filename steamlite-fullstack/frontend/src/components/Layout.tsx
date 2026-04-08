@@ -1,6 +1,7 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { AssistantWidget } from "./AssistantWidget";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? "nav-link nav-link-active" : "nav-link";
@@ -8,6 +9,12 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export const Layout = () => {
   const { user, logout } = useAuth();
   const { cartCount } = useCart();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/auth");
+  };
 
   return (
     <div className="app-shell">
@@ -27,6 +34,9 @@ export const Layout = () => {
 
           {user && (
             <>
+              <NavLink to="/library" className={navClass}>
+                Library
+              </NavLink>
               <NavLink to="/wishlist" className={navClass}>
                 Wishlist
               </NavLink>
@@ -44,6 +54,12 @@ export const Layout = () => {
               Admin
             </NavLink>
           )}
+
+          {user?.role === "DEVELOPER" && (
+            <NavLink to="/my-games" className={navClass}>
+              My Games
+            </NavLink>
+          )}
         </nav>
 
         <div className="session-block">
@@ -53,7 +69,7 @@ export const Layout = () => {
                 <span>{user.username}</span>
                 <strong>{user.role}</strong>
               </div>
-              <button className="button button-secondary" onClick={logout}>
+              <button className="button button-secondary" type="button" onClick={handleLogout}>
                 Log out
               </button>
             </>
@@ -68,6 +84,8 @@ export const Layout = () => {
       <main className="page-wrap">
         <Outlet />
       </main>
+
+      <AssistantWidget />
     </div>
   );
 };
