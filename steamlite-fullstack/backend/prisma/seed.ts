@@ -775,7 +775,7 @@ async function main() {
     });
   }
 
-  console.log("Seed completed with 1 admin, 3 developers, 5 customers, and 43 games.");
+  console.log("Seed completed with 1 admin, 3 developers, 5 customers, and 44 games.");
 }
 
 main()
