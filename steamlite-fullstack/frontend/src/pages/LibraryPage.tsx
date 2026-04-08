@@ -58,15 +58,16 @@ export const LibraryPage = () => {
             {library.map((entry) => (
               <article key={entry.id} className="panel list-card">
                 <div className="library-card-content">
-                  <div
-                    className={entry.game.coverImageUrl ? "library-cover library-cover-image" : "library-cover"}
-                    style={
-                      entry.game.coverImageUrl
-                        ? { backgroundImage: `url(${entry.game.coverImageUrl})` }
-                        : undefined
-                    }
-                  >
-                    {!entry.game.coverImageUrl && <span>{entry.game.title.slice(0, 2).toUpperCase()}</span>}
+                  <div className="library-cover">
+                    {entry.game.coverImageUrl ? (
+                      <img
+                        className="library-cover-media"
+                        src={entry.game.coverImageUrl}
+                        alt={`${entry.game.title} cover`}
+                      />
+                    ) : (
+                      <span>{entry.game.title.slice(0, 2).toUpperCase()}</span>
+                    )}
                   </div>
 
                   <div>
