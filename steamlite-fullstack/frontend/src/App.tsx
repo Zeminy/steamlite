@@ -12,6 +12,7 @@ import { GameDetailsPage } from "./pages/GameDetailsPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { StorePage } from "./pages/StorePage";
+import { VerifyCodePage } from "./pages/VerifyCodePage";
 import { WishlistPage } from "./pages/WishlistPage";
 
 export default function App() {
@@ -20,7 +21,8 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-            <Route element={<Layout />}>
+              <Route element={<Layout />}>
+              <Route path="/auth/verify-code" element={<VerifyCodePage />} />
               <Route index element={<StorePage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/games/:id" element={<GameDetailsPage />} />

@@ -14,7 +14,38 @@ type AuthContextType = {
   loading: boolean;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (
+    username: string,
+    email: string,
+    password: string,
+    marketingEmails: boolean
+  ) => Promise<{
+    message: string;
+    email: string;
+    emailDelivery?: {
+      recipient: string;
+      status: string;
+      sentAt: string;
+      provider: string;
+    };
+    verificationPreviewCode?: string;
+  }>;
+  verifyRegistrationCode: (email: string, code: string) => Promise<{
+    message: string;
+    email: string;
+    username: string;
+  }>;
+  resendVerificationCode: (email: string) => Promise<{
+    message: string;
+    email: string;
+    emailDelivery?: {
+      recipient: string;
+      status: string;
+      sentAt: string;
+      provider: string;
+    };
+    verificationPreviewCode?: string;
+  }>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
 };
@@ -54,10 +85,53 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     persistAuth(response.token, response.user);
   };
 
-  const register = async (username: string, email: string, password: string) => {
-    await apiRequest<{ token: string; user: User }>("/auth/register", {
+  const register = async (
+    username: string,
+    email: string,
+    password: string,
+    marketingEmails: boolean
+  ) => {
+    return apiRequest<{
+      message: string;
+      email: string;
+      emailDelivery?: {
+        recipient: string;
+        status: string;
+        sentAt: string;
+        provider: string;
+      };
+      verificationPreviewCode?: string;
+    }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ username, email, password, marketingEmails }),
+    });
+  };
+
+  const verifyRegistrationCode = async (email: string, code: string) => {
+    return apiRequest<{
+      message: string;
+      email: string;
+      username: string;
+    }>("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    });
+  };
+
+  const resendVerificationCode = async (email: string) => {
+    return apiRequest<{
+      message: string;
+      email: string;
+      emailDelivery?: {
+        recipient: string;
+        status: string;
+        sentAt: string;
+        provider: string;
+      };
+      verificationPreviewCode?: string;
+    }>("/auth/resend-verification-code", {
+      method: "POST",
+      body: JSON.stringify({ email }),
     });
   };
 
@@ -91,6 +165,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       token,
       login,
       register,
+      verifyRegistrationCode,
+      resendVerificationCode,
       logout,
       refreshProfile,
     }),
