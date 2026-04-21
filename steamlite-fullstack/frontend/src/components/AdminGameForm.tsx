@@ -33,6 +33,7 @@ export const AdminGameForm = ({
 }: AdminGameFormProps) => {
   const [form, setForm] = useState<GamePayload>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
 
   useEffect(() => {
     if (selectedGame) {
@@ -49,6 +50,7 @@ export const AdminGameForm = ({
     } else {
       setForm(emptyForm);
     }
+    setPreviewFailed(false);
   }, [selectedGame]);
 
   const handleChange = (name: keyof GamePayload, value: string) => {
@@ -157,12 +159,33 @@ export const AdminGameForm = ({
       <label>
         Cover image URL
         <input
-          type="url"
+          type="text"
           value={form.coverImageUrl || ""}
           onChange={(event) => handleChange("coverImageUrl", event.target.value)}
-          placeholder="https://example.com/game-cover.jpg"
+          placeholder="https://example.com/game-cover.jpg or /covers/game-cover.jpg"
         />
       </label>
+
+      <div className="cover-preview-card">
+        <span className="muted">Cover preview</span>
+        {form.coverImageUrl && !previewFailed ? (
+          <img
+            className="cover-preview-media"
+            src={form.coverImageUrl}
+            alt="Game cover preview"
+            onError={() => setPreviewFailed(true)}
+          />
+        ) : (
+          <div className="cover-preview-empty">
+            <strong>{form.title ? form.title.slice(0, 2).toUpperCase() : "SL"}</strong>
+            <p>
+              {form.coverImageUrl
+                ? "The provided image URL could not be loaded. Use a direct public image link."
+                : "Paste a public image URL to preview the game cover here."}
+            </p>
+          </div>
+        )}
+      </div>
 
       {showDeveloperField && (
         <label>

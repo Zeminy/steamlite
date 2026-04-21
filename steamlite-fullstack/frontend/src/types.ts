@@ -238,3 +238,12 @@ export type CheckoutResult = {
     provider: string;
   } | null;
 };
+
+export type DeveloperOverview = {
+  gamesCount: number;
+  totalSalesCount: number;
+  grossRevenue: number;
+  platformRevenue: number;
+  developerRevenue: number;
+  commissionRate: number;
+};

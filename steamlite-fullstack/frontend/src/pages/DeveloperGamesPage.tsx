@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "../api/client";
-import { Game, GamePayload } from "../types";
+import { Game, GamePayload, DeveloperOverview } from "../types";
 import { AdminGameForm } from "../components/AdminGameForm";
 
 export const DeveloperGamesPage = () => {
   const [games, setGames] = useState<Game[]>([]);
+  const [overview, setOverview] = useState<DeveloperOverview | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -16,8 +17,12 @@ export const DeveloperGamesPage = () => {
     }
 
     try {
-      const response = await apiRequest<{ games: Game[] }>("/games/mine");
-      setGames(response.games);
+      const [gamesResponse, overviewResponse] = await Promise.all([
+        apiRequest<{ games: Game[] }>("/games/mine"),
+        apiRequest<{ overview: DeveloperOverview }>("/developer/overview"),
+      ]);
+      setGames(gamesResponse.games);
+      setOverview(overviewResponse.overview);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to load your games.");
     } finally {
@@ -96,6 +101,31 @@ export const DeveloperGamesPage = () => {
           This screen covers the developer use case from the diagram: create, edit, and remove only
           the games that belong to your own developer profile.
         </p>
+
+        {overview && (
+          <div className="stat-grid">
+            <article className="stat-card">
+              <span>My games</span>
+              <strong>{overview.gamesCount}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Total sales</span>
+              <strong>{overview.totalSalesCount}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Gross revenue</span>
+              <strong>${overview.grossRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>Platform fee ({Math.round(overview.commissionRate * 100)}%)</span>
+              <strong>${overview.platformRevenue.toFixed(2)}</strong>
+            </article>
+            <article className="stat-card">
+              <span>My earnings</span>
+              <strong>${overview.developerRevenue.toFixed(2)}</strong>
+            </article>
+          </div>
+        )}
 
         {message && <div className="status-banner">{message}</div>}
       </section>

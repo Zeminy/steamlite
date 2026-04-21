@@ -30,6 +30,9 @@ export default function App() {
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/assistant" element={<AssistantPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute requiredRole={["CUSTOMER", "DEVELOPER"]} />}>
                 <Route path="/library" element={<LibraryPage />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/wishlist" element={<WishlistPage />} />

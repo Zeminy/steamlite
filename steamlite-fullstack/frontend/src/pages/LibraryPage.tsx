@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest, ApiError } from "../api/client";
 import { LibraryItem } from "../types";
+import { useAuth } from "../context/AuthContext";
 
 export const LibraryPage = () => {
+  const { user } = useAuth();
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -55,40 +57,50 @@ export const LibraryPage = () => {
           </div>
         ) : (
           <div className="list-grid">
-            {library.map((entry) => (
-              <article key={entry.id} className="panel list-card">
-                <div className="library-card-content">
-                  <div className="library-cover">
-                    {entry.game.coverImageUrl ? (
-                      <img
-                        className="library-cover-media"
-                        src={entry.game.coverImageUrl}
-                        alt={`${entry.game.title} cover`}
-                      />
-                    ) : (
-                      <span>{entry.game.title.slice(0, 2).toUpperCase()}</span>
-                    )}
-                  </div>
+            {library.map((entry) => {
+              const isCreator = user?.role === "DEVELOPER" && entry.game.developerUserId === user.id;
 
-                  <div>
-                    <h3>{entry.game.title}</h3>
-                    <p className="muted">{entry.game.developerCompany}</p>
-                    <p>{entry.game.description}</p>
-                    <div className="meta-row">
-                      <span>Genre: {entry.game.genre || "Uncategorized"}</span>
-                      <span>Purchased: {new Date(entry.purchasedAt).toLocaleString()}</span>
+              return (
+                <article key={entry.id} className="panel list-card">
+                  <div className="library-card-content">
+                    <div className="library-cover">
+                      {entry.game.coverImageUrl ? (
+                        <img
+                          className="library-cover-media"
+                          src={entry.game.coverImageUrl}
+                          alt={`${entry.game.title} cover`}
+                        />
+                      ) : (
+                        <span>{entry.game.title.slice(0, 2).toUpperCase()}</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3>{entry.game.title}</h3>
+                      <p className="muted">{entry.game.developerCompany}</p>
+                      <p>{entry.game.description}</p>
+                      <div className="meta-row">
+                        <span>Genre: {entry.game.genre || "Uncategorized"}</span>
+                        <span>
+                          {isCreator ? "Created" : "Purchased"}:{" "}
+                          {new Date(entry.purchasedAt).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="list-card-actions">
-                  <strong>${entry.game.price.toFixed(2)}</strong>
-                  <Link className="button button-primary button-link" to={`/games/${entry.game.id}`}>
-                    View details
-                  </Link>
-                </div>
-              </article>
-            ))}
+                  <div className="list-card-actions">
+                    <strong>${entry.game.price.toFixed(2)}</strong>
+                    <Link
+                      className="button button-primary button-link"
+                      to={`/games/${entry.game.id}`}
+                    >
+                      View details
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

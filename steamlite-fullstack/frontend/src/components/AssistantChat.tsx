@@ -157,7 +157,14 @@ export const AssistantChat = ({
             }
           >
             <strong>{message.role === "assistant" ? "SteamLite Guide" : "You"}</strong>
-            <p>{message.content}</p>
+            <p>
+              {message.content.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+                if (part.startsWith("**") && part.endsWith("**")) {
+                  return <strong key={i}>{part.slice(2, -2)}</strong>;
+                }
+                return part;
+              })}
+            </p>
           </article>
         ))}
       </div>

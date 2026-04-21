@@ -4,6 +4,7 @@ import { apiRequest, ApiError } from "../api/client";
 import { GameDetail, LibraryItem, Wishlist } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { StarRating } from "../components/StarRating";
 
 export const GameDetailsPage = () => {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export const GameDetailsPage = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [coverFailed, setCoverFailed] = useState(false);
 
   const loadGame = async () => {
     if (Number.isNaN(gameId)) {
@@ -67,6 +69,10 @@ export const GameDetailsPage = () => {
   }, [gameId]);
 
   useEffect(() => {
+    setCoverFailed(false);
+  }, [game?.coverImageUrl, game?.id]);
+
+  useEffect(() => {
     loadUserGameState();
   }, [user?.id, gameId]);
 
@@ -91,6 +97,7 @@ export const GameDetailsPage = () => {
     () => game?.reviews.find((review) => review.userId === user?.id),
     [game, user?.id]
   );
+  const canBuy = user?.role === "CUSTOMER" || user?.role === "DEVELOPER";
   const displayPrice = game?.finalPrice ?? game?.price ?? 0;
   const basePrice = game?.basePrice ?? game?.price ?? 0;
 
@@ -98,15 +105,9 @@ export const GameDetailsPage = () => {
   const hasFullAccess = Boolean(
     user && (user.role === "ADMIN" || (user.role === "DEVELOPER" && game?.developerUserId === user.id))
   );
-  const canReview = Boolean(user && (isOwned || hasFullAccess));
+  const canReview = Boolean(user);
   const isWishlisted = wishlistGameIds.includes(gameId);
-  const wishlistLabel = hasFullAccess
-    ? "Full access"
-    : isOwned
-    ? "In library"
-    : isWishlisted
-    ? "In wishlist"
-    : "Add to wishlist";
+  const wishlistLabel = isOwned ? "In library" : isWishlisted ? "In wishlist" : "Add to wishlist";
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -208,8 +209,13 @@ export const GameDetailsPage = () => {
     <div className="stack-gap">
       <section className="hero-grid">
         <div className="panel detail-cover">
-          {game.coverImageUrl ? (
-            <img className="detail-cover-media" src={game.coverImageUrl} alt={game.title} />
+          {game.coverImageUrl && !coverFailed ? (
+            <img
+              className="detail-cover-media"
+              src={game.coverImageUrl}
+              alt={game.title}
+              onError={() => setCoverFailed(true)}
+            />
           ) : (
             <span>{game.title.slice(0, 2).toUpperCase()}</span>
           )}
@@ -226,7 +232,9 @@ export const GameDetailsPage = () => {
 
           <div className="meta-row">
             <span>Release: {new Date(game.releaseDate).toLocaleDateString()}</span>
-            <span>Rating: {game.averageRating || 0} / 5</span>
+            <span>
+              Rating: <StarRating rating={game.averageRating || 0} size="small" />
+            </span>
             <span>{game.reviewCount || 0} review(s)</span>
           </div>
 
@@ -240,20 +248,24 @@ export const GameDetailsPage = () => {
                 </>
               )}
             </div>
-            <button
-              className="button button-primary"
-              disabled={busy !== null || isOwned || hasFullAccess}
-              onClick={handleAddToCart}
-            >
-              {hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart"}
-            </button>
-            <button
-              className="button button-secondary"
-              disabled={busy !== null || isOwned || hasFullAccess || isWishlisted}
-              onClick={handleAddToWishlist}
-            >
-              {wishlistLabel}
-            </button>
+            {canBuy && (
+              <button
+                className="button button-primary"
+                disabled={busy !== null || isOwned || hasFullAccess}
+                onClick={handleAddToCart}
+              >
+                {hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart"}
+              </button>
+            )}
+            {canBuy && !isOwned && !hasFullAccess && (
+              <button
+                className="button button-secondary"
+                disabled={busy !== null || isWishlisted}
+                onClick={handleAddToWishlist}
+              >
+                {wishlistLabel}
+              </button>
+            )}
           </div>
 
           {isOwned && <div className="status-banner">You already own this game in your library.</div>}
@@ -294,7 +306,7 @@ export const GameDetailsPage = () => {
                       <strong>{review.username || "Player"}</strong>
                       <div className="muted">{new Date(review.createdAt).toLocaleString()}</div>
                     </div>
-                    <div className="price-tag">{review.rating} / 5</div>
+                    <StarRating rating={review.rating} size="small" />
                   </div>
                   <p>{review.comment || "No comment provided."}</p>
                 </article>
@@ -314,29 +326,27 @@ export const GameDetailsPage = () => {
           {!user ? (
             <div className="empty-state">
               <h3>Log in to review.</h3>
-              <p>You need an account and a purchased copy before leaving a review.</p>
+              <p>You need a SteamLite account before leaving a review.</p>
             </div>
           ) : !canReview ? (
             <div className="empty-state">
               <h3>Access required.</h3>
-              <p>Only owners, admins, or the game's developer can submit a review.</p>
+              <p>Only authenticated users can submit a review.</p>
             </div>
           ) : (
             <form className="form-grid" onSubmit={handleReviewSubmit}>
               <label>
                 Rating
-                <select
-                  value={reviewForm.rating}
-                  onChange={(event) =>
-                    setReviewForm((current) => ({ ...current, rating: event.target.value }))
-                  }
-                >
-                  <option value="5">5 - Excellent</option>
-                  <option value="4">4 - Good</option>
-                  <option value="3">3 - Fine</option>
-                  <option value="2">2 - Weak</option>
-                  <option value="1">1 - Poor</option>
-                </select>
+                <div style={{ marginTop: "0.5rem" }}>
+                  <StarRating
+                    rating={Number(reviewForm.rating)}
+                    interactive
+                    size="large"
+                    onChange={(val) =>
+                      setReviewForm((current) => ({ ...current, rating: String(val) }))
+                    }
+                  />
+                </div>
               </label>
 
               <label>

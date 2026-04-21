@@ -238,6 +238,14 @@ textarea {
   justify-content: center;
 }
 
+.visually-hidden-image-probe {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .status-banner {
   padding: 0.9rem 1rem;
   border-radius: 16px;
@@ -276,6 +284,72 @@ textarea {
 
 .stat-grid {
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.dashboard-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 1rem;
+}
+
+.dashboard-tab {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(148, 163, 184, 0.08);
+  color: #e2e8f0;
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+}
+
+.dashboard-tab-active {
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  border-color: transparent;
+  color: white;
+}
+
+.cover-preview-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+}
+
+.cover-preview-media {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.cover-preview-empty {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.7rem;
+  padding: 1rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.cover-preview-empty strong {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #2563eb, #14b8a6);
+  letter-spacing: 0.08em;
+  font-size: 1.2rem;
+}
+
+.cover-preview-empty p {
+  margin: 0;
+  color: #cbd5e1;
 }
 
 .assistant-suggestion-list {
@@ -1057,3 +1131,45 @@ select {
     justify-content: flex-start;
   }
 }
+
+/* Star Rating */
+.star-rating {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.star {
+  color: #475569; /* Slate-600 */
+  transition: color 0.2s, transform 0.1s, text-shadow 0.2s;
+  cursor: default;
+  line-height: 1;
+  user-select: none;
+}
+
+.star-filled {
+  color: #fbbf24; /* Amber-400 */
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.star-interactive {
+  cursor: pointer;
+}
+
+.star-interactive:hover {
+  transform: scale(1.25);
+  color: #f59e0b; /* Amber-500 */
+}
+
+.star-small {
+  font-size: 0.9rem;
+}
+
+.star-medium {
+  font-size: 1.4rem;
+}
+
+.star-large {
+  font-size: 2.2rem;
+}
+
