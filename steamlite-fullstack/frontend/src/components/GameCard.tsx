@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Game, User } from "../types";
 import { Link } from "react-router-dom";
+import { StarRating } from "./StarRating";
 
 type GameCardProps = {
   game: Game;
@@ -22,6 +24,8 @@ export const GameCard = ({
   onAddToCart,
   onAddToWishlist,
 }: GameCardProps) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  const canBuy = currentUser?.role === "CUSTOMER" || currentUser?.role === "DEVELOPER";
   const addToCartLabel = hasFullAccess ? "Full access" : isOwned ? "Owned" : "Add to cart";
   const wishlistLabel = hasFullAccess
     ? "Full access"
@@ -33,14 +37,28 @@ export const GameCard = ({
   const displayPrice = game.finalPrice ?? game.price;
   const basePrice = game.basePrice ?? game.price;
 
+  useEffect(() => {
+    setImageFailed(false);
+  }, [game.coverImageUrl, game.id]);
+
   return (
     <article className="game-card">
       <Link
         to={`/games/${game.id}`}
-        className={game.coverImageUrl ? "game-banner game-banner-image" : "game-banner"}
-        style={game.coverImageUrl ? { backgroundImage: `url(${game.coverImageUrl})` } : undefined}
+        className={game.coverImageUrl && !imageFailed ? "game-banner game-banner-image" : "game-banner"}
+        style={game.coverImageUrl && !imageFailed ? { backgroundImage: `url(${game.coverImageUrl})` } : undefined}
       >
-        {!game.coverImageUrl && <span>{game.title.slice(0, 2).toUpperCase()}</span>}
+        {game.coverImageUrl && !imageFailed ? (
+          <img
+            className="visually-hidden-image-probe"
+            src={game.coverImageUrl}
+            alt=""
+            aria-hidden="true"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span>{game.title.slice(0, 2).toUpperCase()}</span>
+        )}
       </Link>
 
       <div className="game-card-body">
@@ -61,7 +79,9 @@ export const GameCard = ({
 
         <div className="meta-row">
           <span>Release: {new Date(game.releaseDate).toLocaleDateString()}</span>
-          <span>Rating: {game.averageRating || 0} / 5</span>
+          <span>
+            Rating: <StarRating rating={game.averageRating || 0} size="small" />
+          </span>
           <span>{game.reviewCount || 0} review(s)</span>
         </div>
 
@@ -70,18 +90,20 @@ export const GameCard = ({
             View details
           </Link>
 
-          <button
-            className="button button-primary"
-            disabled={busy || hasFullAccess || isOwned}
-            onClick={() => onAddToCart(game.id)}
-          >
-            {addToCartLabel}
-          </button>
+          {canBuy && (
+            <button
+              className="button button-primary"
+              disabled={busy || hasFullAccess || isOwned}
+              onClick={() => onAddToCart(game.id)}
+            >
+              {addToCartLabel}
+            </button>
+          )}
 
-          {currentUser && (
+          {canBuy && !hasFullAccess && !isOwned && (
             <button
               className="button button-secondary"
-              disabled={busy || hasFullAccess || isOwned || isWishlisted}
+              disabled={busy || isWishlisted}
               onClick={() => onAddToWishlist(game.id)}
             >
               {wishlistLabel}

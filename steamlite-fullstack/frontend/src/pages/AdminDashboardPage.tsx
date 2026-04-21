@@ -10,8 +10,15 @@ import {
   Role,
 } from "../types";
 import { AdminGameForm } from "../components/AdminGameForm";
+import { StarRating } from "../components/StarRating";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export const AdminDashboardPage = () => {
+  const { user: currentUser } = useAuth();
+  const [activeSection, setActiveSection] = useState<"catalog" | "moderation" | "analytics">(
+    "catalog"
+  );
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [developers, setDevelopers] = useState<AdminDeveloper[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -134,10 +141,21 @@ export const AdminDashboardPage = () => {
       await apiRequest(`/admin/users/${userId}`, {
         method: "DELETE",
       });
-      setMessage("User deleted.");
+      setMessage("User account deleted.");
       await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to delete user.");
+    }
+  };
+
+  const deleteReview = async (reviewId: number) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    try {
+      await apiRequest(`/admin/reviews/${reviewId}`, { method: "DELETE" });
+      setMessage("Review deleted successfully.");
+      loadData(false);
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Unable to delete review.");
     }
   };
 
@@ -163,6 +181,30 @@ export const AdminDashboardPage = () => {
         </div>
 
         {message && <div className="status-banner">{message}</div>}
+
+        <div className="dashboard-tabs" role="tablist" aria-label="Admin sections">
+          <button
+            type="button"
+            className={`dashboard-tab ${activeSection === "catalog" ? "dashboard-tab-active" : ""}`}
+            onClick={() => setActiveSection("catalog")}
+          >
+            Game catalog
+          </button>
+          <button
+            type="button"
+            className={`dashboard-tab ${activeSection === "moderation" ? "dashboard-tab-active" : ""}`}
+            onClick={() => setActiveSection("moderation")}
+          >
+            User moderation
+          </button>
+          <button
+            type="button"
+            className={`dashboard-tab ${activeSection === "analytics" ? "dashboard-tab-active" : ""}`}
+            onClick={() => setActiveSection("analytics")}
+          >
+            Revenue & orders
+          </button>
+        </div>
 
         {overview && (
           <div className="stat-grid">
@@ -206,216 +248,281 @@ export const AdminDashboardPage = () => {
         )}
       </section>
 
-      <section className="dashboard-grid">
-        <AdminGameForm
-          developers={developers.filter((developer) => !developer.isBanned && !developer.deletedAt)}
-          selectedGame={selectedGame}
-          onSubmit={submitGame}
-          onCancel={() => setSelectedGame(null)}
-          showDiscountField
-        />
-
-        <div className="panel">
-          <div className="section-header">
-            <h3>Game catalog</h3>
-            <span className="muted">{games.length} game(s)</span>
-          </div>
-
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Genre</th>
-                  <th>Developer</th>
-                  <th>Price</th>
-                  <th>Discount</th>
-                  <th>Release</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {games.map((game) => (
-                  <tr key={game.id}>
-                    <td>{game.title}</td>
-                    <td>{game.genre || "Uncategorized"}</td>
-                    <td>{game.developerCompany}</td>
-                    <td>
-                      {game.isDiscounted ? (
-                        <div>
-                          <div>${(game.finalPrice || game.price).toFixed(2)}</div>
-                          <div className="muted price-strike">${(game.basePrice || game.price).toFixed(2)}</div>
-                        </div>
-                      ) : (
-                        `$${game.price.toFixed(2)}`
-                      )}
-                    </td>
-                    <td>{game.discountPercent ? `${game.discountPercent}%` : "-"}</td>
-                    <td>{new Date(game.releaseDate).toLocaleDateString()}</td>
-                    <td className="actions-inline">
-                      <button
-                        className="button button-secondary"
-                        onClick={() => setSelectedGame(game)}
-                      >
-                        Edit
-                      </button>
-                      <button className="button button-secondary" onClick={() => deleteGame(game.id)}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section className="dashboard-grid">
-        <div className="panel">
-          <div className="section-header">
-            <h3>Flagged reviews</h3>
-            <span className="muted">{overview?.flaggedReviewCount || 0} flagged review(s)</span>
-          </div>
-
-          <div className="stack-gap">
-            {overview?.flaggedReviews.length ? (
-              overview.flaggedReviews.map((review) => (
-                <article key={review.id} className="review-card">
-                  <div className="review-header">
-                    <div>
-                      <strong>{review.user.username}</strong>
-                      <div className="muted">
-                        {review.game.title} - {new Date(review.createdAt).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="price-tag">{review.rating}/5</div>
-                  </div>
-
-                  <p>{review.comment || "No written comment was left for this low review."}</p>
-                  <div className="flagged-review-reasons">
-                    {review.reasons.map((reason) => (
-                      <span key={`${review.id}-${reason}`} className="flagged-review-chip">
-                        {reason}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="actions-row">
-                    <button
-                      className="button button-secondary"
-                      disabled={Boolean(review.user.deletedAt)}
-                      onClick={() => toggleBan(review.user.id, review.user.isBanned)}
-                    >
-                      {review.user.isBanned ? "Unban user" : "Ban user"}
-                    </button>
-                    <button
-                      className="button button-secondary"
-                      disabled={Boolean(review.user.deletedAt)}
-                      onClick={() => deleteUser(review.user.id)}
-                    >
-                      {review.user.deletedAt ? "Deleted" : "Delete user"}
-                    </button>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="empty-state">
-                <h3>No toxic reviews flagged</h3>
-                <p>The dashboard did not detect any clearly suspicious or hostile reviews right now.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="panel">
-          <div className="section-header">
-            <h3>User management</h3>
-            <span className="muted">{users.length} user(s)</span>
-          </div>
-
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Developer</th>
-                  <th>Orders</th>
-                  <th>Reviews</th>
-                  <th>Change role</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((entry) => (
-                  <tr key={entry.id}>
-                    <td>
-                      <strong>{entry.username}</strong>
-                      <div className="muted">{entry.email}</div>
-                    </td>
-                    <td>{entry.role}</td>
-                    <td>{entry.deletedAt ? "Deleted" : entry.isBanned ? "Banned" : "Active"}</td>
-                    <td>{entry.developerCompany || "-"}</td>
-                    <td>{entry.orderCount}</td>
-                    <td>{entry.reviewCount}</td>
-                    <td>
-                      <select
-                        value={entry.role}
-                        disabled={Boolean(entry.deletedAt)}
-                        onChange={(event) => updateRole(entry.id, event.target.value as Role)}
-                      >
-                        <option value="CUSTOMER">CUSTOMER</option>
-                        <option value="DEVELOPER">DEVELOPER</option>
-                        <option value="ADMIN">ADMIN</option>
-                      </select>
-                    </td>
-                    <td className="actions-inline">
-                      <button
-                        className="button button-secondary"
-                        disabled={Boolean(entry.deletedAt)}
-                        onClick={() => toggleBan(entry.id, entry.isBanned)}
-                      >
-                        {entry.isBanned ? "Unban" : "Ban"}
-                      </button>
-                      <button
-                        className="button button-secondary"
-                        disabled={Boolean(entry.deletedAt)}
-                        onClick={() => deleteUser(entry.id)}
-                      >
-                        {entry.deletedAt ? "Deleted" : "Delete"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="section-header">
-          <h3>Recent orders</h3>
-          <span className="muted">{orders.length} total order(s)</span>
-        </div>
-
-        <div className="stack-gap">
-          {orders.slice(0, 6).map((order) => (
-            <article key={order.id} className="order-item-row">
+      {activeSection === "catalog" && (
+        <>
+          <section className="panel">
+            <div className="section-header">
               <div>
-                <strong>
-                  #{order.id} - {order.user?.username || "Customer"}
-                </strong>
-                <div className="muted">
-                  {new Date(order.orderDate).toLocaleString()} - {order.payment?.paymentMethod}
+                <span className="eyebrow">Catalog</span>
+                <h2>Game catalog management</h2>
+              </div>
+            </div>
+            <p className="muted">
+              Create new titles, edit existing catalog entries, assign developers, and manage
+              discount settings from this section.
+            </p>
+          </section>
+
+          <section className="management-layout">
+            <AdminGameForm
+              developers={developers.filter((developer) => !developer.isBanned && !developer.deletedAt)}
+              selectedGame={selectedGame}
+              onSubmit={submitGame}
+              onCancel={() => setSelectedGame(null)}
+              showDiscountField
+            />
+
+            <div className="panel">
+              <div className="section-header">
+                <h3>Game catalog</h3>
+                <span className="muted">{games.length} game(s)</span>
+              </div>
+
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Genre</th>
+                      <th>Developer</th>
+                      <th>Price</th>
+                      <th>Discount</th>
+                      <th>Release</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {games.map((game) => (
+                      <tr key={game.id}>
+                        <td>{game.title}</td>
+                        <td>{game.genre || "Uncategorized"}</td>
+                        <td>{game.developerCompany}</td>
+                        <td>
+                          {game.isDiscounted ? (
+                            <div>
+                              <div>${(game.finalPrice || game.price).toFixed(2)}</div>
+                              <div className="muted price-strike">${(game.basePrice || game.price).toFixed(2)}</div>
+                            </div>
+                          ) : (
+                            `$${game.price.toFixed(2)}`
+                          )}
+                        </td>
+                        <td>{game.discountPercent ? `${game.discountPercent}%` : "-"}</td>
+                        <td>{new Date(game.releaseDate).toLocaleDateString()}</td>
+                        <td className="actions-inline">
+                          <button
+                            className="button button-secondary"
+                            onClick={() => setSelectedGame(game)}
+                          >
+                            Edit
+                          </button>
+                          <button className="button button-secondary" onClick={() => deleteGame(game.id)}>
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
+      {activeSection === "moderation" && (
+        <>
+          <section className="panel">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">Governance</span>
+                <h2>User moderation and trust signals</h2>
+              </div>
+            </div>
+            <p className="muted">
+              Review suspicious feedback, ban or unban accounts, adjust roles, and remove accounts when
+              moderation action is required.
+            </p>
+          </section>
+
+          <section className="management-layout">
+            <div className="panel">
+              <div className="section-header">
+                <h3>Flagged reviews</h3>
+                <span className="muted">{overview?.flaggedReviewCount || 0} flagged review(s)</span>
+              </div>
+
+              <div className="flagged-reviews-scroll">
+                <div className="stack-gap">
+                {overview?.flaggedReviews.length ? (
+                  overview.flaggedReviews.map((review) => (
+                    <article key={review.id} className="review-card">
+                      <div className="review-header">
+                        <div>
+                          <strong>{review.user.username}</strong>
+                          <div className="muted">
+                            {review.game.title} - {new Date(review.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                        <StarRating rating={review.rating} size="small" />
+                      </div>
+
+                      <p>{review.comment || "No written comment was left for this low review."}</p>
+                      <div className="flagged-review-reasons">
+                        {review.reasons.map((reason) => (
+                          <span key={`${review.id}-${reason}`} className="flagged-review-chip">
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="actions-row">
+                        <Link
+                          to={`/games/${review.game.id}#review-${review.id}`}
+                          className="button button-secondary"
+                        >
+                          Inspect in store
+                        </Link>
+                        <button
+                          className="button button-secondary"
+                          onClick={() => deleteReview(review.id)}
+                        >
+                          Delete review
+                        </button>
+                        <button
+                          className="button button-secondary"
+                          disabled={Boolean(review.user.deletedAt) || currentUser?.id === review.user.id}
+                          onClick={() => toggleBan(review.user.id, review.user.isBanned)}
+                        >
+                          {review.user.isBanned ? "Unban user" : "Ban user"}
+                        </button>
+                        <button
+                          className="button button-secondary"
+                          disabled={Boolean(review.user.deletedAt) || currentUser?.id === review.user.id}
+                          onClick={() => deleteUser(review.user.id)}
+                        >
+                          {review.user.deletedAt ? "Deleted" : "Delete user"}
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <h3>No toxic reviews flagged</h3>
+                    <p>The dashboard did not detect any clearly suspicious or hostile reviews right now.</p>
+                  </div>
+                )}
                 </div>
               </div>
-              <div className="price-tag">${order.totalAmount.toFixed(2)}</div>
-            </article>
-          ))}
-        </div>
-      </section>
+            </div>
+
+            <div className="panel">
+              <div className="section-header">
+                <h3>User management</h3>
+                <span className="muted">{users.length} user(s)</span>
+              </div>
+
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Developer</th>
+                      <th>Orders</th>
+                      <th>Reviews</th>
+                      <th>Change role</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>
+                          <strong>{entry.username}</strong>
+                          <div className="muted">{entry.email}</div>
+                        </td>
+                        <td>{entry.role}</td>
+                        <td>{entry.deletedAt ? "Deleted" : entry.isBanned ? "Banned" : "Active"}</td>
+                        <td>{entry.developerCompany || "-"}</td>
+                        <td>{entry.orderCount}</td>
+                        <td>{entry.reviewCount}</td>
+                        <td>
+                          <select
+                            value={entry.role}
+                            disabled={Boolean(entry.deletedAt)}
+                            onChange={(event) => updateRole(entry.id, event.target.value as Role)}
+                          >
+                            <option value="CUSTOMER">CUSTOMER</option>
+                            <option value="DEVELOPER">DEVELOPER</option>
+                            <option value="ADMIN">ADMIN</option>
+                          </select>
+                        </td>
+                        <td className="actions-inline">
+                          <button
+                            className="button button-secondary"
+                            disabled={Boolean(entry.deletedAt)}
+                            onClick={() => toggleBan(entry.id, entry.isBanned)}
+                          >
+                            {entry.isBanned ? "Unban" : "Ban"}
+                          </button>
+                          <button
+                            className="button button-secondary"
+                            disabled={Boolean(entry.deletedAt)}
+                            onClick={() => deleteUser(entry.id)}
+                          >
+                            {entry.deletedAt ? "Deleted" : "Delete"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
+      {activeSection === "analytics" && (
+        <>
+          <section className="panel">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">Analytics</span>
+                <h2>Revenue and recent orders</h2>
+              </div>
+            </div>
+            <p className="muted">
+              Track the latest completed purchases and monitor order activity directly from the admin
+              dashboard.
+            </p>
+          </section>
+
+          <section className="panel">
+            <div className="section-header">
+              <h3>Recent orders</h3>
+              <span className="muted">{orders.length} total order(s)</span>
+            </div>
+
+            <div className="stack-gap">
+              {orders.slice(0, 6).map((order) => (
+                <article key={order.id} className="order-item-row">
+                  <div>
+                    <strong>
+                      #{order.id} - {order.user?.username || "Customer"}
+                    </strong>
+                    <div className="muted">
+                      {new Date(order.orderDate).toLocaleString()} - {order.payment?.paymentMethod}
+                    </div>
+                  </div>
+                  <div className="price-tag">${order.totalAmount.toFixed(2)}</div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 };
