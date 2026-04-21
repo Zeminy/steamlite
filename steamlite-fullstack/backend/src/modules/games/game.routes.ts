@@ -467,10 +467,6 @@ gameRouter.post(
       throw new AppError(404, "Game not found.");
     }
 
-    if (!access.canAccess) {
-      throw new AppError(403, "Only owners, admins, or the game's developer can review this game.");
-    }
-
     const review = await prisma.review.upsert({
       where: {
         userId_gameId: {
