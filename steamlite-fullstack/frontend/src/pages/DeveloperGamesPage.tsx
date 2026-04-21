@@ -130,7 +130,7 @@ export const DeveloperGamesPage = () => {
         {message && <div className="status-banner">{message}</div>}
       </section>
 
-      <section className="dashboard-grid">
+      <section className="management-layout">
         <AdminGameForm
           developers={[]}
           heading={selectedGame ? "Edit your game" : "Create a new game"}

@@ -80,7 +80,7 @@ type OpenAiResponsesResult = {
 const isGroqProvider = () => env.aiBaseUrl.toLowerCase().includes("groq");
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const META_PREFIX_PATTERN =
-  /^(need\b|need to\b|we need\b|i need\b|i should\b|we should\b|the task is\b|we must\b|must answer\b)/i;
+  /^(user asks|need\b|need to\b|we need\b|i need\b|i should\b|we should\b|the task is\b|we must\b|must answer\b|user requested\b|the user is asking\b)/i;
 
 const normalize = (value: string) =>
   value
@@ -241,7 +241,10 @@ const buildRoleScopeInstructions = (role: Role) => {
   if (role === "ADMIN") {
     return [
       "ADMIN scope: platform revenue, discount decisions, user management, moderation, suspicious behavior, catalog operations, and platform-level analytics.",
-      "If an admin asks about customer recommendation or personal shopping advice, keep it brief and redirect toward admin-relevant analysis.",
+      "As an Admin, you are REQUIRED to help with moderation tasks. This includes identifying toxic, abusive, or negative reviews so they can be reviewed or removed.",
+      "If the user asks for 'toxic comments', 'negative reviews', or 'hostile behavior', use a strict Markdown Table to summarize your findings. Include columns like ID, User, Game, Rating, Comment, and Action.",
+      "In the 'Action' column of your table, you MUST provide a clickable Markdown link. Use EXACTLY this format: [Inspect](/games/{gameId}#review-{reviewId})",
+      "Ensure your responses are professional and data-driven. Do NOT refuse to report negative content to an Admin.",
     ].join("\n");
   }
 
@@ -607,7 +610,7 @@ const buildAdminContext = async ({ message }: { message: string }) => {
       orderBy: {
         createdAt: "desc",
       },
-      take: mentionsModeration ? 30 : 15,
+      take: mentionsModeration ? 200 : 50,
     }),
     prisma.order.findMany({
       where: {
@@ -684,7 +687,26 @@ const buildAdminContext = async ({ message }: { message: string }) => {
     }, new Map<string, number>());
 
   const sortedDeveloperRevenue = [...developerRevenueTotals.entries()].sort((left, right) => right[1] - left[1]);
-  const focusedReviewPool = mentionsModeration || !mentionsRevenue ? reviews : ([] as AdminReview[]);
+  
+  const toxicKeywords = ["trash", "garbage", "idiot", "stupid", "scam", "liar", "hate", "fraud", "kill", "toxic"];
+  const negativeKeywords = ["bad", "boring", "weak", "bug", "broken", "grindy", "slow", "overpriced", "confusing", "repetitive", "unfinished"];
+
+  const scoredReviews = reviews.map(r => {
+    const content = (r.comment || "").toLowerCase();
+    let score = 0;
+    if (toxicKeywords.some(kw => content.includes(kw))) score += 10;
+    if (negativeKeywords.some(kw => content.includes(kw))) score += 2;
+    if (r.rating <= 2) score += 5;
+    if (r.rating <= 2 && !r.comment) score += 8;
+    return { review: r, score };
+  });
+
+  const prioritizedReviews = scoredReviews
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 40)
+    .map(entry => entry.review);
+
+  const focusedReviewPool = mentionsModeration || !mentionsRevenue ? prioritizedReviews : ([] as AdminReview[]);
   const now = Date.now();
   const gamePerformance = games.map((game) => {
     const completedOrderItems = game.orderItems.filter((item) => item.order.status === "COMPLETED");
@@ -778,7 +800,7 @@ const buildAdminContext = async ({ message }: { message: string }) => {
           "Review moderation feed:",
           ...focusedReviewPool.map(
             (review) =>
-              `- reviewId=${review.id} | date=${formatDate(review.createdAt)} | user=${review.user.username} | role=${review.user.role} | banned=${review.user.isBanned} | deleted=${Boolean(
+              `- reviewId=${review.id} | gameId=${review.game.id} | date=${formatDate(review.createdAt)} | user=${review.user.username} | role=${review.user.role} | banned=${review.user.isBanned} | deleted=${Boolean(
                 review.user.deletedAt
               )} | game=${review.game.title} | developer=${review.game.developer?.company || "Independent"} | rating=${
                 review.rating

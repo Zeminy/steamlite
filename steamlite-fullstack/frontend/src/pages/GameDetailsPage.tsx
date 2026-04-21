@@ -77,6 +77,20 @@ export const GameDetailsPage = () => {
   }, [user?.id, gameId]);
 
   useEffect(() => {
+    if (game && window.location.hash) {
+      const targetId = window.location.hash.slice(1);
+      setTimeout(() => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.classList.add("review-highlight");
+          setTimeout(() => element.classList.remove("review-highlight"), 3000);
+        }
+      }, 500);
+    }
+  }, [game, window.location.hash]);
+
+  useEffect(() => {
     if (!game || !user) {
       setReviewForm({
         rating: "5",
@@ -300,7 +314,7 @@ export const GameDetailsPage = () => {
           ) : (
             <div className="stack-gap">
               {game.reviews.map((review) => (
-                <article key={review.id} className="review-card">
+                <article key={review.id} id={`review-${review.id}`} className="review-card">
                   <div className="review-header">
                     <div>
                       <strong>{review.username || "Player"}</strong>

@@ -11,8 +11,11 @@ import {
 } from "../types";
 import { AdminGameForm } from "../components/AdminGameForm";
 import { StarRating } from "../components/StarRating";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export const AdminDashboardPage = () => {
+  const { user: currentUser } = useAuth();
   const [activeSection, setActiveSection] = useState<"catalog" | "moderation" | "analytics">(
     "catalog"
   );
@@ -138,10 +141,21 @@ export const AdminDashboardPage = () => {
       await apiRequest(`/admin/users/${userId}`, {
         method: "DELETE",
       });
-      setMessage("User deleted.");
+      setMessage("User account deleted.");
       await loadData(false);
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Unable to delete user.");
+    }
+  };
+
+  const deleteReview = async (reviewId: number) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    try {
+      await apiRequest(`/admin/reviews/${reviewId}`, { method: "DELETE" });
+      setMessage("Review deleted successfully.");
+      loadData(false);
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Unable to delete review.");
     }
   };
 
@@ -249,7 +263,7 @@ export const AdminDashboardPage = () => {
             </p>
           </section>
 
-          <section className="dashboard-grid">
+          <section className="management-layout">
             <AdminGameForm
               developers={developers.filter((developer) => !developer.isBanned && !developer.deletedAt)}
               selectedGame={selectedGame}
@@ -331,14 +345,15 @@ export const AdminDashboardPage = () => {
             </p>
           </section>
 
-          <section className="dashboard-grid">
+          <section className="management-layout">
             <div className="panel">
               <div className="section-header">
                 <h3>Flagged reviews</h3>
                 <span className="muted">{overview?.flaggedReviewCount || 0} flagged review(s)</span>
               </div>
 
-              <div className="stack-gap">
+              <div className="flagged-reviews-scroll">
+                <div className="stack-gap">
                 {overview?.flaggedReviews.length ? (
                   overview.flaggedReviews.map((review) => (
                     <article key={review.id} className="review-card">
@@ -361,16 +376,28 @@ export const AdminDashboardPage = () => {
                         ))}
                       </div>
                       <div className="actions-row">
+                        <Link
+                          to={`/games/${review.game.id}#review-${review.id}`}
+                          className="button button-secondary"
+                        >
+                          Inspect in store
+                        </Link>
                         <button
                           className="button button-secondary"
-                          disabled={Boolean(review.user.deletedAt)}
+                          onClick={() => deleteReview(review.id)}
+                        >
+                          Delete review
+                        </button>
+                        <button
+                          className="button button-secondary"
+                          disabled={Boolean(review.user.deletedAt) || currentUser?.id === review.user.id}
                           onClick={() => toggleBan(review.user.id, review.user.isBanned)}
                         >
                           {review.user.isBanned ? "Unban user" : "Ban user"}
                         </button>
                         <button
                           className="button button-secondary"
-                          disabled={Boolean(review.user.deletedAt)}
+                          disabled={Boolean(review.user.deletedAt) || currentUser?.id === review.user.id}
                           onClick={() => deleteUser(review.user.id)}
                         >
                           {review.user.deletedAt ? "Deleted" : "Delete user"}
@@ -384,6 +411,7 @@ export const AdminDashboardPage = () => {
                     <p>The dashboard did not detect any clearly suspicious or hostile reviews right now.</p>
                   </div>
                 )}
+                </div>
               </div>
             </div>
 

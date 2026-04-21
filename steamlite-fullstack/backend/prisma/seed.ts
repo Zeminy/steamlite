@@ -82,6 +82,77 @@ const customerSeeds: CustomerSeed[] = [
     email: "iris@steamlite.local",
     password: "User123!",
   },
+  {
+    username: "alex",
+    email: "alex@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "sam",
+    email: "sam@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "robin",
+    email: "robin@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "morgan",
+    email: "morgan@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "taylor",
+    email: "taylor@steamlite.local",
+    password: "User123!",
+  },
+];
+
+const positiveComments = [
+  "Absolutely incredible! The best game I've played this year.",
+  "10/10 would play again. Masterpiece.",
+  "Stunning visuals and the gameplay is so smooth.",
+  "I can't put this down. Just one more hour...",
+  "Valve/Dev really outdid themselves this time.",
+  "Highly recommend to anyone who likes this genre.",
+  "A breath of fresh air in the gaming industry.",
+  "Worth every penny, even at full price.",
+  "The music alone is worth the price of admission.",
+  "Finally a game that respects my time.",
+];
+
+const neutralComments = [
+  "It's okay, nothing groundbreaking but solid.",
+  "A decent experience. Has some flaws but enjoyable.",
+  "Average game. Good for a weekend play.",
+  "I liked parts of it, but other parts were frustrating.",
+  "Not bad, not great. Just okay.",
+  "Wait for a sale, but it's worth playing eventually.",
+  "Interesting ideas but the execution is a bit hit or miss.",
+  "A bit repetitive after a while, but fine in small doses.",
+];
+
+const negativeComments = [
+  "Boring and repetitive. I lost interest after 2 hours.",
+  "Way too many bugs. Feels like an early access title.",
+  "Disappointing. I expected much more from this team.",
+  "Broken mechanics and terrible optimization.",
+  "Too grindy for my taste. Feels like a chore.",
+  "The story makes no sense and the characters are flat.",
+  "Overpriced for the amount of content you get.",
+  "I regret buying this. Refunded within an hour.",
+];
+
+const toxicComments = [
+  "This game is literal TRASH. Garbage devs.",
+  "SCAM! Do not buy this fraud of a game.",
+  "Complete idiot design. Total waste of my life.",
+  "I HATE EVERYTHING ABOUT THIS. Delete this garbage.",
+  "STUPID mechanics, STUPID story. Garbage garbage garbage.",
+  "Liars! They promised features that aren't even here.",
+  "Kill me now, this is the worst thing I've ever seen.",
+  "Toxic community and toxic game. Avoid like the plague.",
 ];
 
 const gameSeeds: GameSeed[] = [
@@ -605,394 +676,75 @@ async function main() {
     games.push(created);
   }
 
-  const [playerOne, luna, kai, minh, iris] = customers;
+  // --- Dynamic Review Generation (10+ per game) ---
+  const allReviewers = [...customers]; // Exclude adminUser to avoid self-moderation confusion
+  const reviewsData: any[] = [];
+
+  for (const game of games) {
+    // Each game gets reviews from most of the reviewers (to reach ~10)
+    const shuffledReviewers = [...allReviewers].sort(() => Math.random() - 0.5);
+    
+    shuffledReviewers.forEach((user, index) => {
+      let rating = 5;
+      let comment = "";
+
+      // Distribute sentiment: 50% Positive, 25% Neutral, 15% Negative, 10% Toxic/Flagged
+      const roll = Math.random();
+      if (roll < 0.5) {
+        rating = 4 + Math.floor(Math.random() * 2); // 4 or 5
+        comment = positiveComments[Math.floor(Math.random() * positiveComments.length)];
+      } else if (roll < 0.75) {
+        rating = 3;
+        comment = neutralComments[Math.floor(Math.random() * neutralComments.length)];
+      } else if (roll < 0.9) {
+        rating = 1 + Math.floor(Math.random() * 2); // 1 or 2
+        comment = negativeComments[Math.floor(Math.random() * negativeComments.length)];
+      } else {
+        // Toxic/Flagged case
+        rating = 1;
+        const toxicRoll = Math.random();
+        if (toxicRoll < 0.7) {
+          comment = toxicComments[Math.floor(Math.random() * toxicComments.length)];
+        } else {
+          comment = ""; // Low rating with no comment (also flagged)
+        }
+      }
+
+      reviewsData.push({
+        userId: user.id,
+        gameId: game.id,
+        rating,
+        comment,
+      });
+    });
+  }
 
   await prisma.review.createMany({
-    data: [
-      {
-        userId: playerOne.id,
-        gameId: games[0].id,
-        rating: 4,
-        comment: "Strong extraction loop and the ARC fights are genuinely tense with friends.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[0].id,
-        rating: 5,
-        comment: "Absolutely loving the atmosphere! It's spooky and satisfying at the same time.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[0].id,
-        rating: 2,
-        comment: "Optimization is a nightmare. I can barely run it on a 3080. Disappointing.",
-      },
-      {
-        userId: adminUser.id,
-        gameId: games[1].id,
-        rating: 5,
-        comment: "Loot showers, big personalities, and a lot of build variety already.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[1].id,
-        rating: 3,
-        comment: "It's fun, but feels like more of the same. Not really a huge leap from BL3.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[2].id,
-        rating: 4,
-        comment: "The world looks huge and the melee combat feels way more ambitious than expected.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[2].id,
-        rating: 5,
-        comment: "Masterpiece in the making. The environmental storytelling is top-notch.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[3].id,
-        rating: 5,
-        comment: "Beautifully strange and surprisingly emotional even when the gameplay slows down.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[3].id,
-        rating: 4,
-        comment: "A bit slow for some, but I appreciate the artistic direction and pacing.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[4].id,
-        rating: 5,
-        comment: "Rip and tear! This medieval setting is exactly what the franchise needed.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[4].id,
-        rating: 2,
-        comment: "I prefer the sci-fi setting. This feels a bit too generic fantasy for DOOM.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[15].id,
-        rating: 5,
-        comment: "IT'S FINALLY HERE AND IT'S PERFECT! Valve really outdid themselves.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[15].id,
-        rating: 5,
-        comment: "I've waited 20 years for this and I'm not crying, you're crying.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[16].id,
-        rating: 5,
-        comment: "Style, music, and gameplay are all 10/10. Royal really adds so much content.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[16].id,
-        rating: 4,
-        comment: "Great JRPG, although the social links can get a bit grindy after 80 hours.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[17].id,
-        rating: 5,
-        comment: "This game ruined my sleep schedule. Just one more run...",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[17].id,
-        rating: 4,
-        comment: "Brilliant mechanics. Simple to learn but incredibly deep once you unlock jokers.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[18].id,
-        rating: 5,
-        comment: "The ultimate creative outlet. My kids and I have spent hundreds of hours building.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[18].id,
-        rating: 2,
-        comment: "I don't get the hype. It's just blocks? Not enough direction for me.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[8].id,
-        rating: 5,
-        comment: "Creepy co-op puzzles land really well and the art direction is fantastic.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[12].id,
-        rating: 5,
-        comment: "Best hunt roster in the catalog so far and the ecosystem changes keep fights fresh.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[10].id,
-        rating: 4,
-        comment: "Matches are fast and flashy, and team-up abilities make it easy to learn with friends.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[7].id,
-        rating: 5,
-        comment: "Wait, is it 2026 already? This game is going to break the internet.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[7].id,
-        rating: 1,
-        comment: "Overhyped and overpriced. The satire is getting stale.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[19].id,
-        rating: 5,
-        comment: "Suspiciously addictive. I spent 4 hours today just being a bean in space.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[20].id,
-        rating: 4,
-        comment: "Classic fun. My niece loves it, and honestly, so do I.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[21].id,
-        rating: 3,
-        comment: "The Microtransactions are a bit much, but the core football is still solid.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[23].id,
-        rating: 2,
-        comment: "Still buggy after all these years. Appalachia deserved better.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[25].id,
-        rating: 5,
-        comment: "The only battle royale that keeps me coming back. The events are insane.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[26].id,
-        rating: 5,
-        comment: "I came for the cute girls, I stayed for the psychological trauma. 10/10.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[27].id,
-        rating: 4,
-        comment: "Brutal finishers and great graphics. The story is surprisingly engaging too.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[29].id,
-        rating: 5,
-        comment: "I haven't felt this genuinely terrified in a game for a long time. Masterful horror.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[30].id,
-        rating: 5,
-        comment: "Relaxing and charming. A great game to unwind with after a stressful day.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[32].id,
-        rating: 5,
-        comment: "The atmosphere is suffocating in the best way possible. A survival horror classic.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[33].id,
-        rating: 5,
-        comment: "Exploring the ocean depths is both beautiful and terrifying. One of my favorites.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[34].id,
-        rating: 5,
-        comment: "Infinite possibilities. I've built a literal castle and a subterranean base.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[35].id,
-        rating: 5,
-        comment: "The scale of this world is staggering. I can't wait to see more of Tamriel.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[37].id,
-        rating: 5,
-        comment: "The shift to turn-based combat was a bold move, and it paid off brilliantly. hilarious writing.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[38].id,
-        rating: 5,
-        comment: "Cyka Blyat! Just kidding, this game is the pinnacle of competitive shooters.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[40].id,
-        rating: 5,
-        comment: "The most ambitious redemption story in gaming history. From launch failure to a true masterpiece.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[5].id,
-        rating: 4,
-        comment: "Classic Fable charm. The humor is still there and the choices feel impactful.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[6].id,
-        rating: 5,
-        comment: "Ghost of Tsushima was incredible, and this looks even better. The setting is breathtaking.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[9].id,
-        rating: 4,
-        comment: "A solid return to the roots of the series. The atmosphere of old-school Sicily is perfect.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[11].id,
-        rating: 5,
-        comment: "The scanning and exploration are just as good as I remember. Samus is back!",
-      },
-      {
-        userId: iris.id,
-        gameId: games[13].id,
-        rating: 4,
-        comment: "Unique art style and very atmospheric. The Southern Gothic vibes are spot on.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[14].id,
-        rating: 5,
-        comment: "The best Total War in years. The character-driven mechanics add so much depth.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[22].id,
-        rating: 3,
-        comment: "Better than last year, but still some legacy issues. Franchise mode needs more work.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[24].id,
-        rating: 5,
-        comment: "Pain. Suffering. Addiction. 10/10.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[28].id,
-        rating: 3,
-        comment: "The gameplay is the best it's ever been, but the VC grind is worse than ever.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[31].id,
-        rating: 4,
-        comment: "Scary and creative. Huggy Wuggy is nightmare fuel.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[36].id,
-        rating: 5,
-        comment: "The most satisfying racing game. Building your own tracks is so much fun.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[39].id,
-        rating: 5,
-        comment: "I never thought I'd be this into horse racing anime girls, but here I am.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[41].id,
-        rating: 4,
-        comment: "Beautiful use of lighting. A very chill and thought-provoking experience.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[42].id,
-        rating: 4,
-        comment: "Hardcore survival that actually feels rewarding. The desert is a harsh mistress.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[43].id,
-        rating: 5,
-        comment: "The mystery kept me guessing until the very end. Monokuma is iconic.",
-      },
-      {
-        userId: adminUser.id,
-        gameId: games[44].id,
-        rating: 5,
-        comment: "The absolute peak of tactical shooters. Nothing else compares to the tension.",
-      },
-    ],
+    data: reviewsData,
   });
 
+  // --- Initial Store Interactions ---
   await prisma.wishlistItem.createMany({
     data: [
-      { wishlistId: playerOne.wishlist!.id, gameId: games[3].id },
-      { wishlistId: playerOne.wishlist!.id, gameId: games[5].id },
-      { wishlistId: luna.wishlist!.id, gameId: games[10].id },
-      { wishlistId: kai.wishlist!.id, gameId: games[12].id },
-      { wishlistId: minh.wishlist!.id, gameId: games[14].id },
-      { wishlistId: iris.wishlist!.id, gameId: games[4].id },
-    ],
-  });
-
-  await prisma.cartItem.createMany({
-    data: [
-      { cartId: playerOne.cart!.id, gameId: games[0].id, quantity: 1 },
-      { cartId: playerOne.cart!.id, gameId: games[4].id, quantity: 1 },
-      { cartId: luna.cart!.id, gameId: games[6].id, quantity: 1 },
-      { cartId: kai.cart!.id, gameId: games[9].id, quantity: 1 },
-      { cartId: minh.cart!.id, gameId: games[13].id, quantity: 1 },
+      { wishlistId: customers[0].wishlist!.id, gameId: games[3].id },
+      { wishlistId: customers[0].wishlist!.id, gameId: games[5].id },
+      { wishlistId: customers[1].wishlist!.id, gameId: games[10].id },
+      { wishlistId: customers[2].wishlist!.id, gameId: games[12].id },
     ],
   });
 
   const completedOrders = [
     {
-      userId: playerOne.id,
+      userId: customers[0].id,
       gameIndexes: [1, 2, 15, 35],
       paymentMethod: "PAYPAL",
       orderDate: new Date("2026-03-18T09:30:00"),
     },
     {
-      userId: luna.id,
+      userId: customers[1].id,
       gameIndexes: [6, 8],
       paymentMethod: "CREDIT_CARD",
       orderDate: new Date("2026-03-20T15:10:00"),
-    },
-    {
-      userId: kai.id,
-      gameIndexes: [7],
-      paymentMethod: "MOMO",
-      orderDate: new Date("2026-03-23T19:45:00"),
-    },
-    {
-      userId: minh.id,
-      gameIndexes: [11, 14],
-      paymentMethod: "BANK_TRANSFER",
-      orderDate: new Date("2026-03-24T21:05:00"),
     },
   ];
 
@@ -1004,18 +756,13 @@ async function main() {
         .toFixed(2)
     );
     const revenueSplit = calculateRevenueSplit(totalAmount);
-    const receiptEmail = customers.find((customer) => customer.id === orderSeed.userId)?.email;
-    const confirmationCode = `SL-SEED-${orderSeed.userId}-${orderSeed.orderDate.getTime()}`;
-    const confirmedAt = new Date(orderSeed.orderDate.getTime() + 60 * 1000);
-    const user = customers.find((customer) => customer.id === orderSeed.userId);
+    const user = customers.find((c) => c.id === orderSeed.userId);
 
     const order = await prisma.order.create({
       data: {
         userId: orderSeed.userId,
-        receiptEmail: receiptEmail || "receipt@steamlite.local",
-        confirmationCode,
-        confirmedAt,
-        confirmationSentAt: confirmedAt,
+        receiptEmail: user?.email || "receipt@steamlite.local",
+        confirmationCode: `SL-SEED-${orderSeed.userId}-${Date.now()}`,
         status: "COMPLETED",
         totalAmount,
         platformRevenue: revenueSplit.platformRevenue,
@@ -1025,7 +772,6 @@ async function main() {
         items: {
           create: selectedGames.map((game) => {
             const pricing = calculateDiscountedPrice(game.price, game.discountPercent || 0);
-
             return {
               gameId: game.id,
               quantity: 1,
@@ -1039,24 +785,9 @@ async function main() {
           create: {
             amount: totalAmount,
             paymentMethod: orderSeed.paymentMethod,
-            paymentDate: confirmedAt,
             status: "SUCCESS",
           },
         },
-      },
-    });
-
-    await prisma.emailDelivery.create({
-      data: {
-        userId: user?.id || null,
-        orderId: order.id,
-        recipient: receiptEmail || "receipt@steamlite.local",
-        subject: `SteamLite order #${order.id} confirmed`,
-        template: "ORDER_CONFIRMATION",
-        bodyText: `Thanks for your purchase. Order #${order.id} has been confirmed.`,
-        status: "SIMULATED",
-        provider: "APP_PREVIEW",
-        sentAt: confirmedAt,
       },
     });
 
@@ -1064,12 +795,11 @@ async function main() {
       data: selectedGames.map((game) => ({
         userId: orderSeed.userId,
         gameId: game.id,
-        purchasedAt: new Date(orderSeed.orderDate.getTime() + 60 * 1000),
       })),
     });
   }
 
-  console.log(`Seed completed with 1 admin, 3 developers, 5 customers, and ${games.length} games.`);
+  console.log(`Seed completed with 1 admin, 3 developers, ${customers.length} customers, and ${games.length} games.`);
 }
 
 main()
