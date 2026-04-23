@@ -2,6 +2,9 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { apiRequest, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { AssistantChatMessagePayload, AssistantChatResponse, Role } from "../types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Link } from "react-router-dom";
 
 type ChatMessage = {
   id: number;
@@ -36,6 +39,7 @@ export const AssistantChat = ({
 }) => {
   const { user } = useAuth();
   const [input, setInput] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([buildWelcomeMessage(user?.role)]);
   const threadRef = useRef<HTMLDivElement | null>(null);
@@ -69,6 +73,7 @@ export const AssistantChat = ({
 
     setSubmitting(true);
     setMessages((current) => [...current, { id: userMessageId, role: "user", content: trimmedMessage }]);
+    setInput("");
 
     try {
       const response = await apiRequest<AssistantChatResponse>("/assistant/chat", {
@@ -97,7 +102,6 @@ export const AssistantChat = ({
           content: replyText,
         },
       ]);
-      setInput("");
     } catch (error) {
       const errorText =
         error instanceof ApiError ? error.message : "The assistant could not answer right now.";
@@ -125,7 +129,11 @@ export const AssistantChat = ({
   }
 
   return (
-    <section className={`panel assistant-panel ${compact ? "assistant-panel-compact" : ""}`}>
+    <section
+      className={`panel assistant-panel ${compact ? "assistant-panel-compact" : ""} ${
+        isExpanded ? "assistant-panel-expanded" : ""
+      }`}
+    >
       <div className="assistant-header">
         <div className="assistant-header-copy">
           {compact ? null : <span className="eyebrow">SteamLite guide</span>}
@@ -135,15 +143,25 @@ export const AssistantChat = ({
           </p>
         </div>
 
-        {onClose ? (
+        <div className="assistant-header-actions">
           <button
-            className="button button-secondary assistant-close-button"
+            className="button button-secondary"
             type="button"
-            onClick={onClose}
+            onClick={() => setIsExpanded(!isExpanded)}
           >
-            Close
+            {isExpanded ? "Collapse" : "Expand"}
           </button>
-        ) : null}
+
+          {onClose ? (
+            <button
+              className="button button-secondary assistant-close-button"
+              type="button"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div ref={threadRef} className="assistant-thread">
@@ -157,7 +175,23 @@ export const AssistantChat = ({
             }
           >
             <strong>{message.role === "assistant" ? "SteamLite Guide" : "You"}</strong>
-            <p>{message.content}</p>
+            <div className="markdown-content">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  a: ({ node, ...props }) => {
+                    const isInternal = props.href?.startsWith("/") || props.href?.includes("localhost:5173");
+                    if (isInternal) {
+                      const path = props.href!.replace(/https?:\/\/localhost:5173/, "");
+                      return <Link to={path}>{props.children}</Link>;
+                    }
+                    return <a {...props} target="_blank" rel="noopener noreferrer" />;
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
           </article>
         ))}
       </div>

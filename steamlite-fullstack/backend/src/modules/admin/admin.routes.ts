@@ -152,7 +152,7 @@ adminRouter.get(
         developerRevenue: revenueSplit.developerRevenue,
         commissionRate: revenueSplit.commissionRate,
         flaggedReviewCount: allFlaggedReviews.length,
-        flaggedReviews: allFlaggedReviews.slice(0, 6).map((entry) => ({
+        flaggedReviews: allFlaggedReviews.slice(0, 100).map((entry) => ({
           id: entry.review.id,
           rating: entry.review.rating,
           comment: entry.review.comment,
@@ -518,6 +518,33 @@ adminRouter.delete(
 
     res.json({
       message: "User deleted permanently.",
+    });
+  })
+);
+
+adminRouter.delete(
+  "/reviews/:id",
+  asyncHandler(async (req, res) => {
+    const reviewId = Number(req.params.id);
+
+    if (Number.isNaN(reviewId)) {
+      throw new AppError(400, "Invalid review id.");
+    }
+
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+
+    if (!review) {
+      throw new AppError(404, "Review not found.");
+    }
+
+    await prisma.review.delete({
+      where: { id: reviewId },
+    });
+
+    res.json({
+      message: "Review deleted successfully.",
     });
   })
 );

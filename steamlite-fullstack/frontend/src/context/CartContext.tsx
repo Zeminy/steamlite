@@ -1,4 +1,4 @@
-import { PropsWithChildren, createContext, useContext, useEffect, useMemo, useState } from "react";
+import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "../api/client";
 import { Cart } from "../types";
 import { useAuth } from "./AuthContext";
@@ -15,7 +15,7 @@ export const CartProvider = ({ children }: PropsWithChildren) => {
   const { user } = useAuth();
   const [cartCount, setCartCount] = useState(0);
 
-  const refreshCart = async () => {
+  const refreshCart = useCallback(async () => {
     if (!user) {
       setCartCount(0);
       return;
@@ -27,11 +27,11 @@ export const CartProvider = ({ children }: PropsWithChildren) => {
     } catch (_error) {
       setCartCount(0);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     refreshCart();
-  }, [user?.id]);
+  }, [refreshCart]);
 
   const value = useMemo(
     () => ({
@@ -39,7 +39,7 @@ export const CartProvider = ({ children }: PropsWithChildren) => {
       refreshCart,
       setCartCount,
     }),
-    [cartCount]
+    [cartCount, refreshCart]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

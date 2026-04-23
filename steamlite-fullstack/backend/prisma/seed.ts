@@ -285,6 +285,77 @@ const customerSeeds: CustomerSeed[] = [
     email: "iris@steamlite.local",
     password: "User123!",
   },
+  {
+    username: "alex",
+    email: "alex@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "sam",
+    email: "sam@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "robin",
+    email: "robin@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "morgan",
+    email: "morgan@steamlite.local",
+    password: "User123!",
+  },
+  {
+    username: "taylor",
+    email: "taylor@steamlite.local",
+    password: "User123!",
+  },
+];
+
+const positiveComments = [
+  "Absolutely incredible! The best game I've played this year.",
+  "10/10 would play again. Masterpiece.",
+  "Stunning visuals and the gameplay is so smooth.",
+  "I can't put this down. Just one more hour...",
+  "Valve/Dev really outdid themselves this time.",
+  "Highly recommend to anyone who likes this genre.",
+  "A breath of fresh air in the gaming industry.",
+  "Worth every penny, even at full price.",
+  "The music alone is worth the price of admission.",
+  "Finally a game that respects my time.",
+];
+
+const neutralComments = [
+  "It's okay, nothing groundbreaking but solid.",
+  "A decent experience. Has some flaws but enjoyable.",
+  "Average game. Good for a weekend play.",
+  "I liked parts of it, but other parts were frustrating.",
+  "Not bad, not great. Just okay.",
+  "Wait for a sale, but it's worth playing eventually.",
+  "Interesting ideas but the execution is a bit hit or miss.",
+  "A bit repetitive after a while, but fine in small doses.",
+];
+
+const negativeComments = [
+  "Boring and repetitive. I lost interest after 2 hours.",
+  "Way too many bugs. Feels like an early access title.",
+  "Disappointing. I expected much more from this team.",
+  "Broken mechanics and terrible optimization.",
+  "Too grindy for my taste. Feels like a chore.",
+  "The story makes no sense and the characters are flat.",
+  "Overpriced for the amount of content you get.",
+  "I regret buying this. Refunded within an hour.",
+];
+
+const toxicComments = [
+  "This game is literal TRASH. Garbage devs.",
+  "SCAM! Do not buy this fraud of a game.",
+  "Complete idiot design. Total waste of my life.",
+  "I HATE EVERYTHING ABOUT THIS. Delete this garbage.",
+  "STUPID mechanics, STUPID story. Garbage garbage garbage.",
+  "Liars! They promised features that aren't even here.",
+  "Kill me now, this is the worst thing I've ever seen.",
+  "Toxic community and toxic game. Avoid like the plague.",
 ];
 
 const gameSeeds: GameSeed[] = [
@@ -818,103 +889,96 @@ async function main() {
     games.push(created);
   }
 
-  const [playerOne, luna, kai, minh, iris] = customers;
+  // --- Dynamic Review Generation (10+ per game) ---
+  const allReviewers = [...customers];
+  const reviewsData: any[] = [];
+
+  for (const game of games) {
+    // Each game gets reviews from most of the reviewers (to reach ~10)
+    const shuffledReviewers = [...allReviewers].sort(() => Math.random() - 0.5);
+    
+    shuffledReviewers.forEach((user) => {
+      let rating = 5;
+      let comment = "";
+
+      // Distribute sentiment: 50% Positive, 25% Neutral, 15% Negative, 10% Toxic/Flagged
+      const roll = Math.random();
+      if (roll < 0.5) {
+        rating = 4 + Math.floor(Math.random() * 2); // 4 or 5
+        comment = positiveComments[Math.floor(Math.random() * positiveComments.length)];
+      } else if (roll < 0.75) {
+        rating = 3;
+        comment = neutralComments[Math.floor(Math.random() * neutralComments.length)];
+      } else if (roll < 0.9) {
+        rating = 1 + Math.floor(Math.random() * 2); // 1 or 2
+        comment = negativeComments[Math.floor(Math.random() * negativeComments.length)];
+      } else {
+        // Toxic/Flagged case
+        rating = 1;
+        const toxicRoll = Math.random();
+        if (toxicRoll < 0.7) {
+          comment = toxicComments[Math.floor(Math.random() * toxicComments.length)];
+        } else {
+          comment = ""; // Low rating with no comment (also flagged)
+        }
+      }
+
+      reviewsData.push({
+        userId: user.id,
+        gameId: game.id,
+        rating,
+        comment,
+      });
+    });
+  }
 
   await prisma.review.createMany({
-    data: [
-      {
-        userId: playerOne.id,
-        gameId: games[13].id,
-        rating: 4,
-        comment: "Strong extraction loop and the ARC fights are genuinely tense with friends.",
-      },
-      {
-        userId: adminUser.id,
-        gameId: games[1].id,
-        rating: 5,
-        comment: "Loot showers, big personalities, and a lot of build variety already.",
-      },
-      {
-        userId: playerOne.id,
-        gameId: games[23].id,
-        rating: 4,
-        comment: "The world looks huge and the melee combat feels way more ambitious than expected.",
-      },
-      {
-        userId: luna.id,
-        gameId: games[18].id,
-        rating: 5,
-        comment: "Beautifully strange and surprisingly emotional even when the gameplay slows down.",
-      },
-      {
-        userId: kai.id,
-        gameId: games[13].id,
-        rating: 1,
-        comment: "trash game, total scam and a waste of time",
-      },
-      {
-        userId: minh.id,
-        gameId: games[5].id,
-        rating: 4,
-        comment: "Creepy co-op puzzles land really well and the art direction is fantastic.",
-      },
-      {
-        userId: iris.id,
-        gameId: games[8].id,
-        rating: 5,
-        comment: "Best hunt roster in the catalog so far and the ecosystem changes keep fights fresh.",
-      },
-      {
-        userId: minh.id,
-        gameId: games[21].id,
-        rating: 4,
-        comment: "Matches are fast and flashy, and team-up abilities make it easy to learn with friends.",
-      },
-    ],
+    data: reviewsData,
   });
 
+  // --- Initial Store Interactions ---
   await prisma.wishlistItem.createMany({
     data: [
-      { wishlistId: playerOne.wishlist!.id, gameId: games[18].id },
-      { wishlistId: playerOne.wishlist!.id, gameId: games[41].id },
-      { wishlistId: luna.wishlist!.id, gameId: games[21].id },
-      { wishlistId: kai.wishlist!.id, gameId: games[8].id },
-      { wishlistId: minh.wishlist!.id, gameId: games[30].id },
-      { wishlistId: iris.wishlist!.id, gameId: games[6].id },
+      { wishlistId: customers[0].wishlist!.id, gameId: games[18].id },
+      { wishlistId: customers[0].wishlist!.id, gameId: games[41].id },
+      { wishlistId: customers[1].wishlist!.id, gameId: games[21].id },
+      { wishlistId: customers[2].wishlist!.id, gameId: games[8].id },
+      { wishlistId: customers[3].wishlist!.id, gameId: games[30].id },
+      { wishlistId: customers[4].wishlist!.id, gameId: games[6].id },
     ],
   });
 
   await prisma.cartItem.createMany({
     data: [
-      { cartId: playerOne.cart!.id, gameId: games[13].id, quantity: 1 },
-      { cartId: playerOne.cart!.id, gameId: games[6].id, quantity: 1 },
-      { cartId: luna.cart!.id, gameId: games[32].id, quantity: 1 },
-      { cartId: kai.cart!.id, gameId: games[2].id, quantity: 1 },
-      { cartId: minh.cart!.id, gameId: games[42].id, quantity: 1 },
+      { cartId: customers[0].cart!.id, gameId: games[13].id, quantity: 1 },
+      { cartId: customers[0].cart!.id, gameId: games[6].id, quantity: 1 },
+      { cartId: customers[1].cart!.id, gameId: games[32].id, quantity: 1 },
+      { cartId: customers[2].cart!.id, gameId: games[2].id, quantity: 1 },
+      { cartId: customers[3].cart!.id, gameId: games[42].id, quantity: 1 },
     ],
   });
 
   const completedOrders = [
     {
-      userId: playerOne.id,
+      userId: customers[0].id,
       gameIndexes: [1, 23],
       paymentMethod: "PAYPAL",
       orderDate: new Date("2026-03-18T09:30:00"),
     },
     {
-      userId: luna.id,
+      userId: customers[1].id,
       gameIndexes: [32, 5],
       paymentMethod: "CREDIT_CARD",
       orderDate: new Date("2026-03-20T15:10:00"),
     },
     {
-      userId: kai.id,
+      userId: customers[2].id,
       gameIndexes: [27],
       paymentMethod: "MOMO",
       orderDate: new Date("2026-03-23T19:45:00"),
     },
     {
-      userId: minh.id,
+      userId: customers[3].id,
       gameIndexes: [22, 30],
       paymentMethod: "BANK_TRANSFER",
       orderDate: new Date("2026-03-24T21:05:00"),
@@ -929,18 +993,13 @@ async function main() {
         .toFixed(2)
     );
     const revenueSplit = calculateRevenueSplit(totalAmount);
-    const receiptEmail = customers.find((customer) => customer.id === orderSeed.userId)?.email;
-    const confirmationCode = `SL-SEED-${orderSeed.userId}-${orderSeed.orderDate.getTime()}`;
-    const confirmedAt = new Date(orderSeed.orderDate.getTime() + 60 * 1000);
-    const user = customers.find((customer) => customer.id === orderSeed.userId);
+    const user = customers.find((c) => c.id === orderSeed.userId);
 
     const order = await prisma.order.create({
       data: {
         userId: orderSeed.userId,
-        receiptEmail: receiptEmail || "receipt@steamlite.local",
-        confirmationCode,
-        confirmedAt,
-        confirmationSentAt: confirmedAt,
+        receiptEmail: user?.email || "receipt@steamlite.local",
+        confirmationCode: `SL-SEED-${orderSeed.userId}-${Date.now()}`,
         status: "COMPLETED",
         totalAmount,
         platformRevenue: revenueSplit.platformRevenue,
@@ -950,7 +1009,6 @@ async function main() {
         items: {
           create: selectedGames.map((game) => {
             const pricing = calculateDiscountedPrice(game.price, game.discountPercent || 0);
-
             return {
               gameId: game.id,
               quantity: 1,
@@ -964,24 +1022,9 @@ async function main() {
           create: {
             amount: totalAmount,
             paymentMethod: orderSeed.paymentMethod,
-            paymentDate: confirmedAt,
             status: "SUCCESS",
           },
         },
-      },
-    });
-
-    await prisma.emailDelivery.create({
-      data: {
-        userId: user?.id || null,
-        orderId: order.id,
-        recipient: receiptEmail || "receipt@steamlite.local",
-        subject: `SteamLite order #${order.id} confirmed`,
-        template: "ORDER_CONFIRMATION",
-        bodyText: `Thanks for your purchase. Order #${order.id} has been confirmed.`,
-        status: "SIMULATED",
-        provider: "APP_PREVIEW",
-        sentAt: confirmedAt,
       },
     });
 
@@ -989,12 +1032,11 @@ async function main() {
       data: selectedGames.map((game) => ({
         userId: orderSeed.userId,
         gameId: game.id,
-        purchasedAt: new Date(orderSeed.orderDate.getTime() + 60 * 1000),
       })),
     });
   }
 
-  console.log("Seed completed with 1 admin, 32 developers, 5 customers, and 43 games.");
+  console.log(`Seed completed with 1 admin, ${developerSeeds.length} developers, ${customers.length} customers, and ${games.length} games.`);
 }
 
 main()

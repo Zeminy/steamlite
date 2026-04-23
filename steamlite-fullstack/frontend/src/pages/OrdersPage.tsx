@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest, ApiError } from "../api/client";
 import { Order } from "../types";
@@ -75,7 +75,7 @@ export const OrdersPage = () => {
                         <div className="muted">{item.game.developerCompany}</div>
                       </div>
                       <div>
-                        Qty {item.quantity} · ${item.lineTotal.toFixed(2)}
+                        ${item.lineTotal.toFixed(2)}
                       </div>
                     </div>
                   ))}

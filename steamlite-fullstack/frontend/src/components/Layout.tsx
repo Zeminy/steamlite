@@ -10,6 +10,7 @@ export const Layout = () => {
   const { user, logout } = useAuth();
   const { cartCount } = useCart();
   const navigate = useNavigate();
+  const canAccessStoreFeatures = user?.role === "CUSTOMER" || user?.role === "DEVELOPER";
 
   const handleLogout = () => {
     logout();
@@ -32,7 +33,7 @@ export const Layout = () => {
             Store
           </NavLink>
 
-          {user && (
+          {canAccessStoreFeatures && (
             <>
               <NavLink to="/library" className={navClass}>
                 Library

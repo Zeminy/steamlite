@@ -3,7 +3,7 @@ import { Role } from "../types";
 import { useAuth } from "../context/AuthContext";
 
 type ProtectedRouteProps = {
-  requiredRole?: Role;
+  requiredRole?: Role | Role[];
 };
 
 export const ProtectedRoute = ({ requiredRole }: ProtectedRouteProps) => {
@@ -23,7 +23,9 @@ export const ProtectedRoute = ({ requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
+  const allowedRoles = Array.isArray(requiredRole) ? requiredRole : requiredRole ? [requiredRole] : [];
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 
