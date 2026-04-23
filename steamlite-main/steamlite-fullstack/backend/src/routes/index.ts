@@ -1,0 +1,22 @@
+import { Router } from "express";
+import { authRouter } from "../modules/auth/auth.routes";
+import { gameRouter } from "../modules/games/game.routes";
+import { cartRouter } from "../modules/cart/cart.routes";
+import { wishlistRouter } from "../modules/wishlist/wishlist.routes";
+import { orderRouter } from "../modules/orders/order.routes";
+import { adminRouter } from "../modules/admin/admin.routes";
+import { libraryRouter } from "../modules/library/library.routes";
+import { assistantRouter } from "../modules/assistant/assistant.routes";
+import { developerRouter } from "../modules/developer/developer.routes";
+
+export const apiRouter = Router();
+
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/games", gameRouter);
+apiRouter.use("/cart", cartRouter);
+apiRouter.use("/wishlist", wishlistRouter);
+apiRouter.use("/orders", orderRouter);
+apiRouter.use("/library", libraryRouter);
+apiRouter.use("/admin", adminRouter);
+apiRouter.use("/assistant", assistantRouter);
+apiRouter.use("/developer", developerRouter);
