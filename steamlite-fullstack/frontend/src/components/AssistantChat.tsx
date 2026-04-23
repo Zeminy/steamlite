@@ -103,8 +103,17 @@ export const AssistantChat = ({
         },
       ]);
     } catch (error) {
-      const errorText =
+      let errorText =
         error instanceof ApiError ? error.message : "The assistant could not answer right now.";
+
+      if (
+        errorText.toLowerCase().includes("rate limit") ||
+        errorText.toLowerCase().includes("tokens per minute") ||
+        errorText.toLowerCase().includes("too many requests")
+      ) {
+        errorText =
+          "⚠️ **AI Token Limit Reached**\n\nThe conversation history is too long and we ran out of AI tokens. Please click the **Clear** button above to reset the chat memory and continue.";
+      }
 
       setMessages((current) => [
         ...current,
@@ -122,6 +131,12 @@ export const AssistantChat = ({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     await sendMessage(input);
+  };
+
+  const handleClearChat = () => {
+    nextMessageIdRef.current = 2;
+    setMessages([buildWelcomeMessage(user?.role)]);
+    setInput("");
   };
 
   if (!user) {
@@ -144,6 +159,14 @@ export const AssistantChat = ({
         </div>
 
         <div className="assistant-header-actions">
+          <button
+            className="button button-secondary"
+            type="button"
+            onClick={handleClearChat}
+            title="Clear chat history"
+          >
+            Clear
+          </button>
           <button
             className="button button-secondary"
             type="button"

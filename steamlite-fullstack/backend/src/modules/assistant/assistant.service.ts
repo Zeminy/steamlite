@@ -80,16 +80,40 @@ type OpenAiResponsesResult = {
 const isGroqProvider = () => env.aiBaseUrl.toLowerCase().includes("groq");
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const META_PREFIX_PATTERN =
-  /^(user asks|need\b|need to\b|we need\b|i need\b|i should\b|we should\b|the task is\b|we must\b|must answer\b|user requested\b|the user is asking\b)/i;
+  /^(user asks|need\b|need to\b|we need\b|i need\b|i should\b|we should\b|the task is\b|we must\b|must answer\b|user requested\b|the user is asking\b|provide\b|providing\b|here is\b|here are\b)/i;
 
-const normalize = (value: string) =>
-  value
+const ALIASES: Record<string, string> = {
+  "gta": "grand theft auto",
+  "gta6": "grand theft auto 6",
+  "gta5": "grand theft auto 5",
+  "vi": "6",
+  "vii": "7",
+  "viii": "8",
+  "ix": "9",
+  "cs": "counter strike",
+  "csgo": "counter strike global offensive",
+  "re7": "resident evil 7",
+  "re": "resident evil",
+  "mc": "minecraft",
+  "mk1": "mortal kombat 1",
+  "mk": "mortal kombat",
+};
+
+const normalize = (value: string) => {
+  let text = value
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+  for (const [alias, full] of Object.entries(ALIASES)) {
+    text = text.replace(new RegExp(`\\b${alias}\\b`, "g"), full);
+  }
+
+  return text;
+};
 
 const tokenize = (value: string) => [...new Set(normalize(value).split(" ").filter((token) => token.length > 1))];
 
