@@ -21,7 +21,7 @@ export const Layout = () => {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand-block">
-          <div className="brand-mark">SL</div>
+          <img src="/logo.png" alt="SteamLite Logo" className="brand-mark-img" />
           <div>
             <h1>SteamLite</h1>
             <p>Game marketplace for gamers by gamers</p>

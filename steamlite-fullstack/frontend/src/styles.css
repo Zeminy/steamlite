@@ -149,16 +149,17 @@ textarea {
   color: #cbd5e1;
 }
 
-.brand-mark {
+.brand-mark-img {
   width: 56px;
   height: 56px;
-  display: grid;
-  place-items: center;
   border-radius: 18px;
-  background: linear-gradient(135deg, #2563eb, #14b8a6);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+  object-fit: cover;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.brand-block:hover .brand-mark-img {
+  box-shadow: 0 14px 32px rgba(0, 200, 255, 0.3);
 }
 
 .nav {
